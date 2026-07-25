@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react'
+import { IconHeart } from './Icons'
+
 /**
  * Donation links, kept in sync with the ones in the double-subtitles extension.
  * They open in a new tab; nothing is collected or proxied by the app itself.
@@ -41,6 +44,58 @@ function PaypalIcon() {
       />
       <path d="M10 12.8h2.3c2.4 0 4 1.2 3.6 3.4-.3 2.2-2 3.3-4.4 3.3H9.4" strokeLinejoin="round" />
     </svg>
+  )
+}
+
+/**
+ * Small always-visible entry point. It sits bottom-left on purpose: the right-hand
+ * column holds the check-in and add buttons, and a floating button there covered one
+ * of them at 42% of scroll positions.
+ */
+export function SupportFab() {
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
+  return (
+    <div className={`supportdial${open ? ' open' : ''}`}>
+      {open && <div className="supportdial-scrim" onClick={() => setOpen(false)} />}
+      <div className="supportdial-items">
+        {LINKS.map(({ url, label, icon: Icon }, i) => (
+          <a
+            key={url}
+            className="supportdial-item"
+            // Staggered on the way out, simultaneous on the way back in.
+            style={{ transitionDelay: open ? `${i * 45}ms` : '0ms' }}
+            href={url}
+            target="_blank"
+            rel="noreferrer noopener"
+            tabIndex={open ? 0 : -1}
+            aria-hidden={!open}
+            onClick={() => setOpen(false)}
+          >
+            <Icon />
+            <span>{label}</span>
+          </a>
+        ))}
+      </div>
+      <button
+        className="supportfab"
+        aria-label={open ? 'Close support links' : 'Support FilmTable'}
+        aria-expanded={open}
+        title="Support FilmTable"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <IconHeart size={20} strokeWidth={2} />
+      </button>
+    </div>
   )
 }
 

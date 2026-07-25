@@ -7,6 +7,7 @@ import ShowDetailPage from './pages/ShowDetailPage'
 import MovieDetailPage from './pages/MovieDetailPage'
 import ProfilePage from './pages/ProfilePage'
 import { BottomNav, ConfirmHost, ScrollToTop, ToastHost } from './components/ui'
+import { SupportFab } from './components/Support'
 import { useLibrary } from './store/library'
 import { refreshShows } from './store/cache'
 import { watchSystemTheme } from './store/theme'
@@ -35,6 +36,7 @@ function Shell() {
         <Route path="*" element={<Navigate to="/shows" replace />} />
       </Routes>
       <BottomNav />
+      <SupportFab />
       <ToastHost />
       <ConfirmHost />
     </div>
