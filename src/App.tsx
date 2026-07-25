@@ -9,6 +9,7 @@ import ProfilePage from './pages/ProfilePage'
 import { BottomNav, ConfirmHost, ScrollToTop, ToastHost } from './components/ui'
 import { useLibrary } from './store/library'
 import { refreshShows } from './store/cache'
+import { watchSystemTheme } from './store/theme'
 
 function Shell() {
   const location = useLocation()
@@ -17,6 +18,7 @@ function Shell() {
   useEffect(() => {
     const { shows } = useLibrary.getState()
     void refreshShows(Object.values(shows).map((t) => t.id))
+    return watchSystemTheme()
   }, [])
 
   return (

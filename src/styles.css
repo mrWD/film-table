@@ -18,12 +18,16 @@
   --strip-blue: #e2edf8;
   --strip-pink: #f8e7ee;
   --strip-green: #e6f3e6;
+  --toast-bg: #1d1d1f;
   --nav-h: 60px;
   color-scheme: light dark;
 }
 
+/* The dark palette applies when the system asks for it, unless the user pinned
+   light in Profile, and always when the user pinned dark. The two selectors
+   cannot be merged because one of them lives inside a media query. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #0e0e10;
     --card: #1b1b1e;
     --ink: #f0f0f0;
@@ -34,11 +38,36 @@
     --check-ink: #8e8e93;
     --pill: #4c4c52;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --toast-bg: #2c2c31;
     --strip-beige: #2b2820;
     --strip-blue: #1e2630;
     --strip-pink: #2d2228;
     --strip-green: #20291f;
+    color-scheme: dark;
   }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0e0e10;
+  --card: #1b1b1e;
+  --ink: #f0f0f0;
+  --ink2: #a3a3a8;
+  --ink3: #7b7b81;
+  --line: #2a2a2e;
+  --check-bg: #2a2a2e;
+  --check-ink: #8e8e93;
+  --pill: #4c4c52;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --toast-bg: #2c2c31;
+  --strip-beige: #2b2820;
+  --strip-blue: #1e2630;
+  --strip-pink: #2d2228;
+  --strip-green: #20291f;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
 }
 
 * {
@@ -642,6 +671,12 @@ img {
   color: #131313;
 }
 
+.chips-hint {
+  color: var(--ink3);
+  font-size: 12.5px;
+  margin: 10px 2px 0;
+}
+
 .results {
   margin-top: 4px;
 }
@@ -1239,7 +1274,7 @@ img {
   transform: translateX(-50%);
   bottom: calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));
   z-index: 60;
-  background: #1d1d1f;
+  background: var(--toast-bg);
   color: #fff;
   border-radius: 999px;
   padding: 12px 20px;

@@ -4,6 +4,7 @@ import { buildBackup, isValidBackup, useLibrary } from '../store/library'
 import { useShowCache } from '../store/cache'
 import { useUi } from '../store/ui'
 import { buildStats } from '../store/selectors'
+import { useTheme, type ThemeChoice } from '../store/theme'
 import { formatBigDuration } from '../lib/format'
 import { Poster } from '../components/ui'
 import { IconDownload, IconTrash, IconUpload, IconUser } from '../components/Icons'
@@ -16,6 +17,8 @@ export default function ProfilePage() {
   const entries = useShowCache((s) => s.entries)
   const showToast = useUi((s) => s.showToast)
   const askConfirm = useUi((s) => s.askConfirm)
+  const theme = useTheme((s) => s.theme)
+  const setTheme = useTheme((s) => s.setTheme)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const stats = buildStats(shows, entries, movies)
@@ -138,6 +141,27 @@ export default function ProfilePage() {
             </section>
           ),
       )}
+
+      <section>
+        <h2 className="h2">Appearance</h2>
+        <div className="chips">
+          {(['system', 'light', 'dark'] as ThemeChoice[]).map((t) => (
+            <button
+              key={t}
+              className={`chip${theme === t ? ' active' : ''}`}
+              aria-pressed={theme === t}
+              onClick={() => setTheme(t)}
+            >
+              {t.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        <p className="chips-hint">
+          {theme === 'system'
+            ? 'Following your device setting.'
+            : `Always ${theme}, whatever the device is set to.`}
+        </p>
+      </section>
 
       <section>
         <h2 className="h2">Data</h2>
