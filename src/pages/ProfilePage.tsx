@@ -222,7 +222,11 @@ export default function ProfilePage() {
       </section>
 
       <p className="attribution">
-        FilmTable · local-first tracker · TV data from{' '}
+        FilmTable · a free, fan-made, local-first tracker · not affiliated with TV Time or Whip
+        Media
+      </p>
+      <p className="attribution">
+        TV data from{' '}
         <a href="https://www.tvmaze.com" target="_blank" rel="noreferrer">
           TVmaze
         </a>{' '}

@@ -805,6 +805,10 @@ img {
   margin: 26px 0 8px;
 }
 
+.attribution + .attribution {
+  margin-top: 0;
+}
+
 .attribution a {
   text-decoration: underline;
 }
