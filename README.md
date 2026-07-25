@@ -1,5 +1,7 @@
 # FilmTable
 
+**→ [mrwd.github.io/film-table](https://mrwd.github.io/film-table/)**
+
 Личный трекер сериалов и фильмов — замена закрытому TV Time. Работает на **Android,
 iPhone и в вебе** из одной кодовой базы (PWA), **без бэкенда и без API-ключей**: все
 данные хранятся на устройстве, метаданные берутся из бесплатных API.
@@ -48,17 +50,23 @@ npm run preview    # http://localhost:4173
 
 `scripts/gen-icons.mjs` перегенерирует PNG-иконки из `public/favicon.svg` (нужен dev-пакет sharp).
 
-## Деплой (бесплатно)
+## Деплой
 
-Это статический сайт — подойдёт любой хостинг статики:
+Живёт на GitHub Pages: <https://mrwd.github.io/film-table/>. Деплой автоматический —
+`.github/workflows/deploy.yml` собирает и публикует сайт при каждом пуше в `main`:
 
-- **Netlify Drop**: перетащите папку `dist/` на <https://app.netlify.com/drop>
-- **Vercel**: `npx vercel` в корне проекта
-- **GitHub Pages**: залейте `dist/` в ветку `gh-pages` (роутинг хэшовый — SPA-fallback не нужен)
+```bash
+git push          # через ~1 минуту изменения на проде
+```
+
+Подпуть репозитория подставляется через переменную `BASE_PATH` (`/film-table/`), локально
+сборка остаётся на корне. Поэтому проект без правок переносится на любой другой хостинг
+статики: **Netlify Drop** (перетащить `dist/` на <https://app.netlify.com/drop>),
+**Vercel** (`npx vercel`) или Cloudflare Pages. Роутинг хэшовый — SPA-fallback не нужен.
 
 ## Установка на телефон
 
-Откройте задеплоенный URL и добавьте на домашний экран:
+Откройте <https://mrwd.github.io/film-table/> и добавьте на домашний экран:
 
 - **iPhone (Safari)**: Поделиться → «На экран „Домой"»
 - **Android (Chrome)**: меню ⋮ → «Добавить на главный экран» (или баннер «Установить»)
