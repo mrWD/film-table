@@ -1,0 +1,48 @@
+import { useEffect } from 'react'
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import ShowsPage from './pages/ShowsPage'
+import MoviesPage from './pages/MoviesPage'
+import ExplorePage from './pages/ExplorePage'
+import ShowDetailPage from './pages/ShowDetailPage'
+import MovieDetailPage from './pages/MovieDetailPage'
+import ProfilePage from './pages/ProfilePage'
+import { BottomNav, ConfirmHost, ScrollToTop, ToastHost } from './components/ui'
+import { useLibrary } from './store/library'
+import { refreshShows } from './store/cache'
+
+function Shell() {
+  const location = useLocation()
+  const isDetail = location.pathname.startsWith('/show/') || location.pathname.startsWith('/movie/')
+
+  useEffect(() => {
+    const { shows } = useLibrary.getState()
+    void refreshShows(Object.values(shows).map((t) => t.id))
+  }, [])
+
+  return (
+    <div className={`app${isDetail ? ' on-detail' : ''}`}>
+      <ScrollToTop />
+      <Routes>
+        <Route path="/" element={<Navigate to="/shows" replace />} />
+        <Route path="/shows" element={<ShowsPage />} />
+        <Route path="/movies" element={<MoviesPage />} />
+        <Route path="/explore" element={<ExplorePage />} />
+        <Route path="/show/:id" element={<ShowDetailPage />} />
+        <Route path="/movie/:id" element={<MovieDetailPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="*" element={<Navigate to="/shows" replace />} />
+      </Routes>
+      <BottomNav />
+      <ToastHost />
+      <ConfirmHost />
+    </div>
+  )
+}
+
+export default function App() {
+  return (
+    <HashRouter>
+      <Shell />
+    </HashRouter>
+  )
+}
