@@ -11,13 +11,13 @@ import { EmptyState, SectionPill, SkeletonRows, TopTabs, useNow } from '../compo
 import { IconGrid, IconList, IconTv } from '../components/Icons'
 
 const SECTION_LABEL: Record<string, string> = {
-  watchNext: 'WATCH NEXT',
-  notStarted: "HAVEN'T STARTED YET",
-  stale: "HAVEN'T WATCHED FOR A WHILE",
+  watchNext: 'UP NEXT',
+  notStarted: 'NOT STARTED',
+  stale: 'BEEN A WHILE',
 }
 
 export default function ShowsPage() {
-  const [tab, setTab] = useState('WATCH LIST')
+  const [tab, setTab] = useState('WATCHLIST')
   const shows = useLibrary((s) => s.shows)
   const entries = useShowCache((s) => s.entries)
   const watchGrid = useLibrary((s) => s.watchGrid)
@@ -36,7 +36,7 @@ export default function ShowsPage() {
   if (followedIds.length === 0) {
     return (
       <div className="page">
-        <TopTabs tabs={['WATCH LIST', 'UPCOMING']} active={tab} onChange={setTab} />
+        <TopTabs tabs={['WATCHLIST', 'UPCOMING']} active={tab} onChange={setTab} />
         <EmptyState
           icon={<IconTv size={44} strokeWidth={1.4} />}
           title="No shows yet"
@@ -53,8 +53,8 @@ export default function ShowsPage() {
 
   return (
     <div className="page">
-      <TopTabs tabs={['WATCH LIST', 'UPCOMING']} active={tab} onChange={setTab} />
-      {tab === 'WATCH LIST' ? (
+      <TopTabs tabs={['WATCHLIST', 'UPCOMING']} active={tab} onChange={setTab} />
+      {tab === 'WATCHLIST' ? (
         <>
           <div className="listtools">
             <span />

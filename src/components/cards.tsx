@@ -40,7 +40,7 @@ export function ShowNextCard({ item, now }: { item: WatchItem; now: Date }) {
   const badges = (
     <>
       {next.number === 1 && <Badge variant="black">{next.season === 1 ? 'PILOT' : 'PREMIERE'}</Badge>}
-      {isNewEp(next.airstamp, now) && <Badge variant="yellow">NEW</Badge>}
+      {isNewEp(next.airstamp, now) && <Badge variant="accent">NEW</Badge>}
     </>
   )
 
@@ -87,7 +87,7 @@ export function ShowGridCard({ item }: { item: WatchItem }) {
           </div>
         )}
       </div>
-      <div className="gridcard-code">{next ? epCode(next.season, next.number) : 'UP TO DATE'}</div>
+      <div className="gridcard-code">{next ? epCode(next.season, next.number) : 'CAUGHT UP'}</div>
       <div className="gridcard-name">{show.name}</div>
     </Link>
   )
@@ -142,7 +142,7 @@ export function UpcomingRow({ entry, now }: { entry: UpcomingEntry; now: Date })
         <div className="eptitle">{ep.name}</div>
         <div className="badges">
           {entry.premiere && <Badge variant="black">PREMIERE</Badge>}
-          {isNewEp(ep.airstamp, now) && <Badge variant="yellow">NEW</Badge>}
+          {isNewEp(ep.airstamp, now) && <Badge variant="accent">NEW</Badge>}
           {aired && <Badge variant="green">AIRED</Badge>}
           {!aired && entry.isLatest && !entry.premiere && <Badge variant="black">LATEST</Badge>}
         </div>

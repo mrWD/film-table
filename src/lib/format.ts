@@ -4,7 +4,7 @@ export function pad2(n: number | null | undefined): string {
 }
 
 export function epCode(season: number, number: number | null): string {
-  return `S${pad2(season)} | E${pad2(number)}`
+  return `${season}×${pad2(number)}`
 }
 
 export function epCodeShort(season: number, number: number | null): string {

@@ -8,7 +8,7 @@ import { EmptyState, SectionPill, TopTabs, useNow } from '../components/ui'
 import { IconClapper } from '../components/Icons'
 
 export default function MoviesPage() {
-  const [tab, setTab] = useState('WATCH LIST')
+  const [tab, setTab] = useState('WATCHLIST')
   const movies = useLibrary((s) => s.movies)
   const setMovieStatus = useLibrary((s) => s.setMovieStatus)
   const showToast = useUi((s) => s.showToast)
@@ -26,7 +26,7 @@ export default function MoviesPage() {
   if (all.length === 0) {
     return (
       <div className="page">
-        <TopTabs tabs={['WATCH LIST', 'UPCOMING']} active={tab} onChange={setTab} />
+        <TopTabs tabs={['WATCHLIST', 'UPCOMING']} active={tab} onChange={setTab} />
         <EmptyState
           icon={<IconClapper size={44} strokeWidth={1.4} />}
           title="No movies yet"
@@ -40,12 +40,12 @@ export default function MoviesPage() {
 
   return (
     <div className="page">
-      <TopTabs tabs={['WATCH LIST', 'UPCOMING']} active={tab} onChange={setTab} />
-      {tab === 'WATCH LIST' ? (
+      <TopTabs tabs={['WATCHLIST', 'UPCOMING']} active={tab} onChange={setTab} />
+      {tab === 'WATCHLIST' ? (
         <>
           {watchlist.length > 0 && (
             <section>
-              <SectionPill>WATCH NEXT</SectionPill>
+              <SectionPill>UP NEXT</SectionPill>
               {watchlist.map((m) => (
                 <MovieRow
                   key={m.id}
@@ -103,7 +103,7 @@ export default function MoviesPage() {
           )}
           <div className="center-cta">
             <Link to="/explore?mode=movies" className="btn outline">
-              BROWSE ALL MOVIES
+              BROWSE MOVIES
             </Link>
           </div>
         </>

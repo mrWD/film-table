@@ -89,7 +89,7 @@ export default function MovieDetailPage() {
 
         <div className="moviedetail-actions">
           <button
-            className={`btn wide ${watched ? '' : 'yellow'}`}
+            className={`btn wide ${watched ? '' : 'accent'}`}
             onClick={() => {
               if (watched) {
                 setMovieStatus(movieId, 'watchlist')

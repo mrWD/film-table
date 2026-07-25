@@ -145,12 +145,12 @@ export default function ShowDetailPage() {
               </span>
               {stopped && <Badge variant="black">STOPPED</Badge>}
               {item.bucket === 'upToDate' && item.watchedCount > 0 && (
-                <Badge variant="green">UP TO DATE</Badge>
+                <Badge variant="green">CAUGHT UP</Badge>
               )}
             </div>
             <ProgressBar value={item.watchedCount} max={item.airedCount} />
             {next && !stopped && (
-              <button className="btn yellow wide" onClick={checkInNext}>
+              <button className="btn accent wide" onClick={checkInNext}>
                 <IconCheck size={18} strokeWidth={2.6} />
                 Check in {epCode(next.season, next.number)}
               </button>

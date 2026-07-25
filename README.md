@@ -8,8 +8,8 @@ iPhone и в вебе** из одной кодовой базы (PWA), **без 
 
 ## Возможности
 
-- **Shows / Watch List** — секции Watch Next, Haven't Started Yet, Haven't Watched For A
-  While; карточка показывает следующий эпизод (`S03 | E01 +3`), чек-ин в один тап с Undo,
+- **Shows / Watchlist** — секции Up Next, Not Started, Been a While; карточка показывает
+  следующий эпизод (`3×01 +3`), чек-ин в один тап с Undo,
   переключение список/сетка.
 - **Shows / Upcoming** — будущие эпизоды ваших сериалов: Today / день недели / Later,
   время и канал, отсчёт «7 DAYS», бейджи PREMIERE / NEW / AIRED / LATEST.

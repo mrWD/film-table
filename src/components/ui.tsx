@@ -83,7 +83,7 @@ export function Badge({
   variant,
   children,
 }: {
-  variant: 'black' | 'yellow' | 'green'
+  variant: 'black' | 'accent' | 'green'
   children: ReactNode
 }) {
   return <span className={`badge badge-${variant}`}>{children}</span>
