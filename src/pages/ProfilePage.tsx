@@ -5,6 +5,7 @@ import { useShowCache } from '../store/cache'
 import { useUi } from '../store/ui'
 import { buildStats } from '../store/selectors'
 import { useTheme, type ThemeChoice } from '../store/theme'
+import { SupportLinks } from '../components/Support'
 import { formatBigDuration } from '../lib/format'
 import { Poster } from '../components/ui'
 import { IconDownload, IconTrash, IconUpload, IconUser } from '../components/Icons'
@@ -213,6 +214,11 @@ export default function ProfilePage() {
             e.target.value = ''
           }}
         />
+      </section>
+
+      <section>
+        <h2 className="h2">Support</h2>
+        <SupportLinks />
       </section>
 
       <p className="attribution">

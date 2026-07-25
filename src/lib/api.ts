@@ -124,7 +124,7 @@ export async function searchShowsTvmaze(query: string): Promise<ShowSummary[]> {
 }
 
 /** Episode tracking needs a TVmaze record, so an IMDb id is resolved to one. */
-async function showByImdb(imdb: string): Promise<ShowSummary | null> {
+export async function showByImdb(imdb: string): Promise<ShowSummary | null> {
   try {
     const data = await getJson<TvmazeShow>(`${TVMAZE}/lookup/shows?imdb=${encodeURIComponent(imdb)}`)
     return mapShow(data)
@@ -191,6 +191,7 @@ export interface CinemetaMeta {
   background?: string | null
   releaseInfo?: string | null
   released?: string | null
+  year?: string | null
   runtime?: string | null
   genres?: string[]
   description?: string | null
@@ -207,6 +208,22 @@ async function cinemetaCatalog(type: 'movie' | 'series', query: string): Promise
 export function searchSeriesCinemeta(query: string): Promise<CinemetaMeta[]> {
   return cinemetaCatalog('series', query)
 }
+
+/**
+ * Genre-filtered catalogue used to gather recommendation candidates.
+ * `imdbRating` sorts by quality, `top` by popularity.
+ */
+export async function fetchGenreCatalog(
+  type: 'movie' | 'series',
+  genre: string,
+  sort: 'imdbRating' | 'top' = 'imdbRating',
+): Promise<CinemetaMeta[]> {
+  const data = await getJson<{ metas?: CinemetaMeta[] }>(
+    `${CINEMETA}/catalog/${type}/${sort}/genre=${encodeURIComponent(genre)}.json`,
+  )
+  return data.metas ?? []
+}
+
 
 async function cinemetaMeta(type: 'movie' | 'series', id: string): Promise<CinemetaMeta | null> {
   try {
@@ -236,7 +253,7 @@ function releaseDateOf(meta: CinemetaMeta): string | null {
   return year ? `${year[1]}-01-01` : null
 }
 
-function mapCinemetaMovie(meta: CinemetaMeta): MovieResult {
+export function mapCinemetaMovie(meta: CinemetaMeta): MovieResult {
   return {
     id: meta.imdb_id || meta.id,
     title: meta.name,

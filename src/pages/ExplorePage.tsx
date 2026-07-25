@@ -5,6 +5,7 @@ import type { ScheduleItem } from '../lib/api'
 import type { ShowSummary } from '../lib/types'
 import { MovieResultRow, ShowResultRow, AddShowButton } from '../components/cards'
 import { Poster, SkeletonRows } from '../components/ui'
+import { useRecommend } from '../store/recommend'
 import { IconSearch, IconTv, IconX } from '../components/Icons'
 import { yearOf } from '../lib/format'
 
@@ -128,6 +129,48 @@ export default function ExplorePage() {
   )
 }
 
+function ForYou() {
+  const { items, loading, error, taste, load } = useRecommend()
+
+  useEffect(() => {
+    void load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Nothing in the library yet — the discovery sections below are the better answer.
+  if (!loading && items.length === 0 && (taste?.topGenres.length ?? 0) === 0) return null
+
+  return (
+    <section>
+      <div className="h2-row">
+        <h2 className="h2">For you</h2>
+        {taste && taste.topGenres.length > 0 && (
+          <button className="textbtn" onClick={() => void load({ force: true })} disabled={loading}>
+            Refresh
+          </button>
+        )}
+      </div>
+      {taste && taste.topGenres.length > 0 && (
+        <p className="chips-hint">
+          Based on {taste.seedCount} title{taste.seedCount === 1 ? '' : 's'} in your library ·{' '}
+          {taste.topGenres.slice(0, 3).join(', ')}
+        </p>
+      )}
+      {loading && items.length === 0 && <SkeletonRows count={3} />}
+      {error && items.length === 0 && (
+        <p className="hint">Could not build recommendations right now.</p>
+      )}
+      {items.map((r) =>
+        r.kind === 'show' ? (
+          <ShowResultRow key={`rs${r.show.id}`} show={r.show} typeTag reason={r.reason} />
+        ) : (
+          <MovieResultRow key={`rm${r.movie.id}`} result={r.movie} typeTag reason={r.reason} />
+        ),
+      )}
+    </section>
+  )
+}
+
 function Discover({
   tonight,
   popular,
@@ -139,6 +182,7 @@ function Discover({
 }) {
   return (
     <>
+      <ForYou />
       <h2 className="h2">Airing tonight</h2>
       {tonight.length === 0 && loading && <SkeletonRows count={2} />}
       {tonight.slice(0, 6).map((item, i) => (

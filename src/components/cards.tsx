@@ -204,7 +204,15 @@ export function UpcomingMovieRow({ entry, now }: { entry: UpcomingMovieEntry; no
 
 // ---------- Explore result rows ----------
 
-export function ShowResultRow({ show, typeTag }: { show: ShowSummary; typeTag?: boolean }) {
+export function ShowResultRow({
+  show,
+  typeTag,
+  reason,
+}: {
+  show: ShowSummary
+  typeTag?: boolean
+  reason?: string
+}) {
   const sub = [yearOf(show.premiered), show.network, show.genres.slice(0, 2).join(', ')]
     .filter(Boolean)
     .join(' • ')
@@ -221,7 +229,11 @@ export function ShowResultRow({ show, typeTag }: { show: ShowSummary; typeTag?: 
           {show.name}
         </div>
         {sub && <div className="moviesub">{sub}</div>}
-        {show.rating ? <div className="moviesub dim">★ {show.rating.toFixed(1)}</div> : null}
+        {reason ? (
+          <div className="reason">{reason}</div>
+        ) : show.rating ? (
+          <div className="moviesub dim">★ {show.rating.toFixed(1)}</div>
+        ) : null}
       </div>
       <AddShowButton show={show} />
     </Link>
@@ -273,7 +285,15 @@ export async function enrichMovie(result: MovieResult): Promise<void> {
   })
 }
 
-export function MovieResultRow({ result, typeTag }: { result: MovieResult; typeTag?: boolean }) {
+export function MovieResultRow({
+  result,
+  typeTag,
+  reason,
+}: {
+  result: MovieResult
+  typeTag?: boolean
+  reason?: string
+}) {
   const inLib = useLibrary((s) => s.movies[result.id])
   const addMovie = useLibrary((s) => s.addMovie)
   const removeMovie = useLibrary((s) => s.removeMovie)
@@ -294,6 +314,7 @@ export function MovieResultRow({ result, typeTag }: { result: MovieResult; typeT
           {result.title}
         </div>
         {sub && <div className="moviesub">{sub}</div>}
+        {reason && <div className="reason">{reason}</div>}
       </div>
       <button
         className={`addbtn${inLib ? ' added' : ''}`}
