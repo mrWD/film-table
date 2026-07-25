@@ -12,6 +12,7 @@ export interface ShowSummary {
   averageRuntime?: number | null
   weight?: number
   summary?: string
+  imdbId?: string | null
 }
 
 export interface Episode {

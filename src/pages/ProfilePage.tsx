@@ -196,7 +196,7 @@ export default function ProfilePage() {
         <a href="https://www.tvmaze.com" target="_blank" rel="noreferrer">
           TVmaze
         </a>{' '}
-        (CC BY-SA) · movie data from iTunes Search API
+        (CC BY-SA) · movie data from Cinemeta and iTunes
       </p>
     </div>
   )

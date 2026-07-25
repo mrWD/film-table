@@ -16,6 +16,7 @@ interface LibraryState {
 
   addMovie: (m: MovieResult, status: Movie['status']) => void
   setMovieStatus: (id: string, status: Movie['status']) => void
+  updateMovieMeta: (id: string, patch: Partial<MovieResult>) => void
   removeMovie: (id: string) => void
 
   setWatchGrid: (grid: boolean) => void
@@ -122,6 +123,14 @@ export const useLibrary = create<LibraryState>()(
               [id]: { ...m, status, watchedAt: status === 'watched' ? Date.now() : undefined },
             },
           }
+        }),
+
+      /** Search results carry only a poster and a year; details arrive later. */
+      updateMovieMeta: (id, patch) =>
+        set((s) => {
+          const m = s.movies[id]
+          if (!m) return s
+          return { movies: { ...s.movies, [id]: { ...m, ...patch, id: m.id } } }
         }),
 
       removeMovie: (id) =>

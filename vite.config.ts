@@ -40,7 +40,7 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /^https:\/\/(static\.tvmaze\.com|.*\.mzstatic\.com)\/.*/,
+            urlPattern: /^https:\/\/(static\.tvmaze\.com|.*\.mzstatic\.com|m\.media-amazon\.com|images\.metahub\.space)\/.*/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'poster-images',
@@ -49,10 +49,10 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /^https:\/\/itunes\.apple\.com\/.*/,
+            urlPattern: /^https:\/\/(itunes\.apple\.com|v3-cinemeta\.strem\.io)\/.*/,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'itunes-api',
+              cacheName: 'movie-api',
               networkTimeoutSeconds: 5,
               expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
               cacheableResponse: { statuses: [0, 200] },

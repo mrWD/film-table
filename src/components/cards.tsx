@@ -10,11 +10,12 @@ import {
   yearOf,
 } from '../lib/format'
 import type { UpcomingEntry, UpcomingMovieEntry, WatchItem } from '../store/selectors'
+import { lookupMovie } from '../lib/api'
 import { ensureShow, useShowCache } from '../store/cache'
 import { useLibrary } from '../store/library'
 import { useUi } from '../store/ui'
 import { Badge, CheckCircle, Poster, ShowChip } from './ui'
-import { IconCheck, IconPlus } from './Icons'
+import { IconCheck, IconClapper, IconPlus, IconTv } from './Icons'
 
 function isNewEp(airstamp: string | null | undefined, now: Date): boolean {
   if (!airstamp) return false
@@ -203,7 +204,7 @@ export function UpcomingMovieRow({ entry, now }: { entry: UpcomingMovieEntry; no
 
 // ---------- Explore result rows ----------
 
-export function ShowResultRow({ show }: { show: ShowSummary }) {
+export function ShowResultRow({ show, typeTag }: { show: ShowSummary; typeTag?: boolean }) {
   const sub = [yearOf(show.premiered), show.network, show.genres.slice(0, 2).join(', ')]
     .filter(Boolean)
     .join(' • ')
@@ -211,7 +212,14 @@ export function ShowResultRow({ show }: { show: ShowSummary }) {
     <Link className="card resultcard" to={`/show/${show.id}`} state={{ show }}>
       <Poster src={show.image} alt={show.name} className="resultcard-poster" />
       <div className="moviecard-body">
-        <div className="movietitle">{show.name}</div>
+        <div className="movietitle">
+          {typeTag && (
+            <span className="typetag" title="TV show">
+              <IconTv size={15} strokeWidth={2} />
+            </span>
+          )}
+          {show.name}
+        </div>
         {sub && <div className="moviesub">{sub}</div>}
         {show.rating ? <div className="moviesub dim">★ {show.rating.toFixed(1)}</div> : null}
       </div>
@@ -250,7 +258,22 @@ export function AddShowButton({ show, big }: { show: ShowSummary; big?: boolean 
   )
 }
 
-export function MovieResultRow({ result }: { result: MovieResult }) {
+/** Fills in runtime, genre and description, which search results omit. */
+export async function enrichMovie(result: MovieResult): Promise<void> {
+  if (result.runtimeMin && result.description) return
+  const full = await lookupMovie(result.id).catch(() => null)
+  if (!full) return
+  useLibrary.getState().updateMovieMeta(result.id, {
+    runtimeMin: full.runtimeMin ?? result.runtimeMin,
+    genre: full.genre ?? result.genre,
+    description: full.description || result.description,
+    releaseDate: full.releaseDate ?? result.releaseDate,
+    poster: result.poster ?? full.poster,
+    contentRating: full.contentRating ?? result.contentRating,
+  })
+}
+
+export function MovieResultRow({ result, typeTag }: { result: MovieResult; typeTag?: boolean }) {
   const inLib = useLibrary((s) => s.movies[result.id])
   const addMovie = useLibrary((s) => s.addMovie)
   const removeMovie = useLibrary((s) => s.removeMovie)
@@ -262,7 +285,14 @@ export function MovieResultRow({ result }: { result: MovieResult }) {
     <Link className="card resultcard" to={`/movie/${result.id}`} state={{ result }}>
       <Poster src={result.poster} alt={result.title} className="moviecard-poster" />
       <div className="moviecard-body">
-        <div className="movietitle">{result.title}</div>
+        <div className="movietitle">
+          {typeTag && (
+            <span className="typetag" title="Movie">
+              <IconClapper size={15} strokeWidth={2} />
+            </span>
+          )}
+          {result.title}
+        </div>
         {sub && <div className="moviesub">{sub}</div>}
       </div>
       <button
@@ -276,6 +306,7 @@ export function MovieResultRow({ result }: { result: MovieResult }) {
             showToast(`${result.title} removed`)
           } else {
             addMovie(result, 'watchlist')
+            void enrichMovie(result)
             showToast(`${result.title} added to watch list`)
           }
         }}

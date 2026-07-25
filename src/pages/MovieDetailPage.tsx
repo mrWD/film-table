@@ -23,14 +23,21 @@ export default function MovieDetailPage() {
   const now = useNow()
   const [fetched, setFetched] = useState<MovieResult | null>(null)
 
-  const movie: MovieResult | undefined = inLib ?? passed ?? fetched ?? undefined
+  const known: MovieResult | undefined = inLib ?? passed ?? undefined
+  // Search results omit runtime and description, so merge in the detail fetch.
+  const movie: MovieResult | undefined = known
+    ? { ...known, ...Object.fromEntries(Object.entries(fetched ?? {}).filter(([, v]) => v != null)), id: known.id, poster: known.poster ?? fetched?.poster ?? null }
+    : (fetched ?? undefined)
 
   useEffect(() => {
-    if (!inLib && !passed) {
-      void lookupMovie(movieId).then((m) => {
-        if (m) setFetched(m)
-      })
-    }
+    if (known?.runtimeMin && known.description) return
+    void lookupMovie(movieId).then((m) => {
+      if (!m) return
+      setFetched(m)
+      if (useLibrary.getState().movies[movieId]) {
+        useLibrary.getState().updateMovieMeta(movieId, m)
+      }
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [movieId])
 
@@ -146,7 +153,7 @@ export default function MovieDetailPage() {
             <IconTrash size={16} /> Remove from library
           </button>
         )}
-        <p className="attribution">Movie data from iTunes Search API</p>
+        <p className="attribution">Movie data from Cinemeta and the iTunes Search API</p>
       </div>
     </div>
   )

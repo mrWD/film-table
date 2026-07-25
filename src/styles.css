@@ -402,6 +402,13 @@ img {
   line-height: 1.25;
 }
 
+.typetag {
+  display: inline-flex;
+  vertical-align: -2px;
+  margin-right: 6px;
+  color: var(--ink3);
+}
+
 .moviesub {
   font-size: 13px;
   color: var(--ink2);

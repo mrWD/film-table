@@ -20,6 +20,7 @@ export default function ExplorePage() {
     runSearch,
     showResults,
     movieResults,
+    mixedResults,
     searching,
     searchError,
     tonight,
@@ -75,7 +76,7 @@ export default function ExplorePage() {
           )}
         </div>
         <div className="chips">
-          {(['shows', 'movies'] as ExploreMode[]).map((m) => (
+          {(['all', 'shows', 'movies'] as ExploreMode[]).map((m) => (
             <button key={m} className={`chip${mode === m ? ' active' : ''}`} onClick={() => setMode(m)}>
               {m.toUpperCase()}
             </button>
@@ -88,6 +89,20 @@ export default function ExplorePage() {
           {searching && <SkeletonRows count={4} />}
           {!searching && searchError && (
             <p className="hint">Search failed. Check your connection and try again.</p>
+          )}
+          {!searching && !searchError && mode === 'all' && (
+            <>
+              {mixedResults.map((r) =>
+                r.kind === 'show' ? (
+                  <ShowResultRow key={`s${r.show.id}`} show={r.show} typeTag />
+                ) : (
+                  <MovieResultRow key={`m${r.movie.id}`} result={r.movie} typeTag />
+                ),
+              )}
+              {mixedResults.length === 0 && (
+                <p className="hint">Nothing found for “{query.trim()}”.</p>
+              )}
+            </>
           )}
           {!searching && !searchError && mode === 'shows' && (
             <>
@@ -184,7 +199,7 @@ function Discover({
         <a href="https://www.tvmaze.com" target="_blank" rel="noreferrer">
           TVmaze
         </a>{' '}
-        · Movie data from iTunes Search API
+        · Movie data from Cinemeta and iTunes
       </p>
     </>
   )

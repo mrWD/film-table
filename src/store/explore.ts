@@ -1,14 +1,48 @@
 import { create } from 'zustand'
 import type { MovieResult, ShowSummary } from '../lib/types'
-import { fetchSchedule, searchMovies, searchShows, type ScheduleItem } from '../lib/api'
+import {
+  fetchSchedule,
+  normalizeTitle,
+  searchMovies,
+  searchShows,
+  type ScheduleItem,
+} from '../lib/api'
 
-export type ExploreMode = 'shows' | 'movies'
+export type ExploreMode = 'all' | 'shows' | 'movies'
+
+export type MixedResult =
+  | { kind: 'show'; show: ShowSummary }
+  | { kind: 'movie'; movie: MovieResult }
+
+/** Exact title matches float to the top, then each source keeps its own ranking. */
+function relevance(title: string, query: string, index: number): number {
+  const t = normalizeTitle(title)
+  const q = normalizeTitle(query)
+  const tier = t === q ? 0 : t.startsWith(q) ? 1 : t.includes(q) ? 2 : 3
+  return tier * 1000 + index
+}
+
+function mixResults(shows: ShowSummary[], movies: MovieResult[], query: string): MixedResult[] {
+  const scored = [
+    ...shows.map((show, i) => ({
+      item: { kind: 'show' as const, show },
+      score: relevance(show.name, query, i),
+    })),
+    ...movies.map((movie, i) => ({
+      item: { kind: 'movie' as const, movie },
+      score: relevance(movie.title, query, i),
+    })),
+  ]
+  scored.sort((a, b) => a.score - b.score)
+  return scored.map((s) => s.item)
+}
 
 interface ExploreState {
   query: string
   mode: ExploreMode
   showResults: ShowSummary[]
   movieResults: MovieResult[]
+  mixedResults: MixedResult[]
   searching: boolean
   searchError: boolean
 
@@ -26,9 +60,10 @@ let searchSeq = 0
 
 export const useExplore = create<ExploreState>((set, get) => ({
   query: '',
-  mode: 'shows',
+  mode: 'all',
   showResults: [],
   movieResults: [],
+  mixedResults: [],
   searching: false,
   searchError: false,
 
@@ -46,18 +81,38 @@ export const useExplore = create<ExploreState>((set, get) => ({
 
   runSearch: async (q, mode) => {
     const seq = ++searchSeq
-    if (!q.trim()) {
-      set({ showResults: [], movieResults: [], searching: false, searchError: false })
+    const term = q.trim()
+    if (!term) {
+      set({
+        showResults: [],
+        movieResults: [],
+        mixedResults: [],
+        searching: false,
+        searchError: false,
+      })
       return
     }
     set({ searching: true, searchError: false })
     try {
       if (mode === 'shows') {
-        const results = await searchShows(q.trim())
+        const results = await searchShows(term)
         if (seq === searchSeq) set({ showResults: results, searching: false })
-      } else {
-        const results = await searchMovies(q.trim())
+      } else if (mode === 'movies') {
+        const results = await searchMovies(term)
         if (seq === searchSeq) set({ movieResults: results, searching: false })
+      } else {
+        const [shows, movies] = await Promise.all([
+          searchShows(term).catch(() => [] as ShowSummary[]),
+          searchMovies(term).catch(() => [] as MovieResult[]),
+        ])
+        if (seq === searchSeq) {
+          set({
+            showResults: shows,
+            movieResults: movies,
+            mixedResults: mixResults(shows, movies, term),
+            searching: false,
+          })
+        }
       }
     } catch (err) {
       console.warn('search failed', err)
