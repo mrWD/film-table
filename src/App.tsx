@@ -10,6 +10,7 @@ import InsightsPage from './pages/InsightsPage'
 import { BottomNav, ConfirmHost, ScrollToTop, ToastHost } from './components/ui'
 import { SupportFab } from './components/Support'
 import { MigrationBanner } from './components/MigrationBanner'
+import { Analytics } from './components/Analytics'
 import { useLibrary } from './store/library'
 import { refreshShows } from './store/cache'
 import { watchSystemTheme } from './store/theme'
@@ -52,6 +53,7 @@ function Shell() {
       <SupportFab />
       <ToastHost />
       <ConfirmHost />
+      <Analytics />
     </div>
   )
 }
