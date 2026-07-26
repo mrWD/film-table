@@ -6,6 +6,7 @@ import { useShowCache } from '../store/cache'
 import { buildStats } from '../store/selectors'
 import { formatBigDuration, formatDateShort } from '../lib/format'
 import { useUi } from '../store/ui'
+import { isPersisted } from '../lib/durability'
 import { IconBack } from '../components/Icons'
 
 /**
@@ -32,6 +33,7 @@ interface Environment {
   libraryKb: string
   cacheKb: string
   online: boolean
+  storagePersisted: boolean
   language: string
   buildTime: string
 }
@@ -61,6 +63,7 @@ async function readEnvironment(): Promise<Environment> {
     libraryKb: kb(localStorage.getItem('filmtable-library-v1') ?? ''),
     cacheKb: kb(localStorage.getItem('filmtable-cache-v1') ?? ''),
     online: navigator.onLine,
+    storagePersisted: await isPersisted(),
     language: navigator.language,
     buildTime: __BUILD_TIME__,
   }
@@ -211,6 +214,12 @@ export default function InsightsPage() {
             ['Mode', env.display],
             ['Service worker', env.serviceWorker],
             ['Network', env.online ? 'online' : 'offline'],
+            [
+              'Storage',
+              env.storagePersisted
+                ? 'persistent — the browser will not evict it on its own'
+                : 'best effort — may be evicted; installing the app helps',
+            ],
             [
               'Storage used',
               env.storageUsedMb ? `${env.storageUsedMb} MB of ${env.storageQuotaMb} MB` : 'n/a',

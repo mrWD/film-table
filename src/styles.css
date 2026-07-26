@@ -1858,3 +1858,10 @@ img {
   padding: 2px;
   flex-shrink: 0;
 }
+
+/* A datarow that reports state instead of doing something when tapped. */
+.datarow.static {
+  cursor: default;
+  width: 100%;
+  text-align: left;
+}

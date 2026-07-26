@@ -6,6 +6,7 @@ import { useUi } from '../store/ui'
 import { buildStats } from '../store/selectors'
 import { useTheme, type ThemeChoice } from '../store/theme'
 import { useStats } from '../store/stats'
+import { AutoBackup } from '../components/AutoBackup'
 import { SupportLinks } from '../components/Support'
 import { Feedback } from '../components/Feedback'
 import { formatBigDuration } from '../lib/format'
@@ -204,6 +205,7 @@ export default function ProfilePage() {
               <div className="datarow-sub">Restore from a FilmTable backup file</div>
             </div>
           </button>
+          <AutoBackup />
           <button
             className="datarow danger"
             onClick={async () => {
