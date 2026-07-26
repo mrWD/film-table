@@ -1,10 +1,14 @@
 # FilmTable
 
-**→ [mrwd.github.io/film-table](https://mrwd.github.io/film-table/)**
+**→ [film-table.vercel.app](https://film-table.vercel.app)**
 
 Личный трекер сериалов и фильмов, написанный после закрытия TV Time. Работает на
-**Android, iPhone и в вебе** из одной кодовой базы (PWA), **без бэкенда и без
-API-ключей**: все данные хранятся на устройстве, метаданные берутся из бесплатных API.
+**Android, iPhone и в вебе** из одной кодовой базы (PWA), **без бэкенда для ваших данных**:
+библиотека хранится на устройстве, метаданные берутся из бесплатных API.
+
+Прежний адрес — [mrwd.github.io/film-table](https://mrwd.github.io/film-table/) — тоже
+работает и остаётся ради библиотек, собранных на нём: `localStorage` привязан к домену и
+сам не переезжает.
 
 Свободный фан-проект. Не аффилирован с TV Time и Whip Media.
 
@@ -75,21 +79,25 @@ npm run preview    # http://localhost:4173
 
 ## Деплой
 
-Живёт на GitHub Pages: <https://mrwd.github.io/film-table/>. Деплой автоматический —
-`.github/workflows/deploy.yml` собирает и публикует сайт при каждом пуше в `main`:
+Два адреса сразу, оба обновляются при пуше в `main`:
+
+- **Vercel** — основной. Статика и функция `/api/tmdb` под одним доменом; ключ TMDB живёт
+  в переменных окружения и в браузер не попадает.
+- **GitHub Pages** — прежний. `.github/workflows/deploy.yml` собирает и публикует;
+  подпуть подставляется через `BASE_PATH` (`/film-table/`). Сборке передаётся
+  `VITE_API_BASE`, указывающий на прокси Vercel, поэтому TMDB работает и там.
 
 ```bash
-git push          # через ~1 минуту изменения на проде
+git push          # через ~1 минуту изменения на обоих
 ```
 
-Подпуть репозитория подставляется через переменную `BASE_PATH` (`/film-table/`), локально
-сборка остаётся на корне. Поэтому проект без правок переносится на любой другой хостинг
-статики: **Netlify Drop** (перетащить `dist/` на <https://app.netlify.com/drop>),
-**Vercel** (`npx vercel`) или Cloudflare Pages. Роутинг хэшовый — SPA-fallback не нужен.
+Роутинг хэшовый, SPA-fallback не нужен, поэтому статика переносится на любой хостинг.
+Но за TMDB нужна функция по пути `/api/tmdb` — без неё приложение работает, просто молча
+уходит на бесключевые источники. Подробности в [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Установка на телефон
 
-Откройте <https://mrwd.github.io/film-table/> и добавьте на домашний экран:
+Откройте <https://film-table.vercel.app> и добавьте на домашний экран:
 
 - **iPhone (Safari)**: Поделиться → «На экран „Домой"»
 - **Android (Chrome)**: меню ⋮ → «Добавить на главный экран» (или баннер «Установить»)
@@ -113,7 +121,7 @@ git push          # через ~1 минуту изменения на прод�
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | структура кода, модель данных, алгоритмы |
 | [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md) | API и их квирки, подтверждённые замерами |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | почему сделано так, и грабли, которые уже прошли |
-| [docs/DEPLOY.md](docs/DEPLOY.md) | GitHub Pages, переезд на Vercel, работа с ключом |
+| [docs/DEPLOY.md](docs/DEPLOY.md) | два адреса, переменные окружения, проверка прода |
 | [docs/PLAN.md](docs/PLAN.md) | исходный план (исторический документ) |
 
 ## Структура

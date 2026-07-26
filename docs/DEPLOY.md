@@ -1,56 +1,82 @@
 # Деплой
 
-## Сейчас: GitHub Pages
+Приложение живёт на **двух** адресах сразу, и это не дубль, а следствие переезда.
 
-Прод — <https://mrwd.github.io/film-table/>. Деплой автоматический: пуш в `main` запускает
-`.github/workflows/deploy.yml`, через минуту изменения на сайте.
+| Адрес | Что это | TMDB |
+|---|---|---|
+| <https://film-table.vercel.app> | основной, статика + функция `/api/tmdb` | да, свой прокси |
+| <https://mrwd.github.io/film-table/> | прежний, остаётся ради уже собранных библиотек | да, через прокси Vercel |
 
-Подпуть репозитория подставляется переменной `BASE_PATH=/film-table/`; локально сборка
-собирается на корень. Ветки не деплоятся — workflow слушает только `main`.
+## Vercel — основной
 
-Проверить, что задеплоена именно текущая версия: хеш бандла на проде должен совпадать с
-локальным.
+Пуш в `main` — Vercel собирает и выкладывает сам.
+
+Одна переменная окружения: `TMDB_API_KEY` в **Settings → Environment Variables** (подходит
+и короткий API Key, и длинный Read Access Token). Больше ключ нигде не нужен. Без него
+прокси отдаёт 503, а клиент молча уходит на Cinemeta и iTunes — приложение работает, но
+качество поиска фильмов падает.
 
 ```bash
-curl -s https://mrwd.github.io/film-table/ | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'
+curl -s "https://film-table.vercel.app/api/tmdb?path=search/movie&query=the+matrix" | head -c 200
+```
+
+## GitHub Pages — прежний адрес
+
+`.github/workflows/deploy.yml` на пуш в `main` собирает и публикует. Подпуть подставляется
+переменной `BASE_PATH=/film-table/`.
+
+**Важно и неочевидно:** этой сборке передаётся `VITE_API_BASE=https://film-table.vercel.app`,
+поэтому старый адрес ходит за TMDB в прокси на Vercel через CORS. То есть Pages —
+полноценная версия, а не урезанная. Проверяется по бандлу:
+
+```bash
+BUNDLE=$(curl -s https://mrwd.github.io/film-table/ | grep -o '/film-table/assets/index-[A-Za-z0-9_-]*\.js' | head -1)
+curl -s "https://mrwd.github.io$BUNDLE" | grep -o 'https://film-table.vercel.app'
+```
+
+Собственного `/api/tmdb` у Pages нет и быть не может — статический хостинг не исполняет
+серверный код. Прямой запрос туда вернёт 404, и это нормально.
+
+### Почему старый адрес не выключен
+
+`localStorage` привязан к домену и на новый домен **не переезжает**. Библиотека, собранная
+на `mrwd.github.io`, там и осталась. Поэтому на старом адресе висит `MigrationBanner`
+(`src/components/MigrationBanner.tsx`): показывается только при `hostname === OLD_HOST`,
+объясняет ситуацию и отправляет в Профиль → Export, а на новом адресе нужен Import.
+
+Выключать Pages нельзя, пока есть шанс, что там лежит чья-то библиотека без бэкапа.
+Если адрес всё же меняется — править `NEW_HOME` в баннере и `VITE_API_BASE` в workflow.
+
+## Проверить, что задеплоена текущая версия
+
+Хеш бандла на проде должен совпадать с локальным:
+
+```bash
+curl -s https://film-table.vercel.app/ | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'
 grep -o 'assets/index-[A-Za-z0-9_-]*\.js' dist/index.html
 ```
 
-## Переезд на Vercel (ветка `vercel-tmdb`, не выполнен)
+**Не опрашивать прод в цикле.** Частые запросы включают Vercel Security Checkpoint, и прод
+начинает отдавать 403 на всё подряд — выглядит как поломка приложения, но проходит само.
 
-Нужен, потому что GitHub Pages не умеет серверный код, а ключ TMDB обязан жить на сервере.
-Vercel хостит статику и функцию под одним доменом.
+Service worker отдаёт прошлую сборку, поэтому перед проверкой в браузере:
 
-### Шаги для владельца
+```js
+for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister()
+for (const k of await caches.keys()) await caches.delete(k)
+location.reload()
+```
 
-1. Завести аккаунт на vercel.com через GitHub.
-2. **Add New → Project**, выбрать репозиторий `mrWD/film-table`. Vite определится сам:
-   команда сборки `npm run build`, каталог `dist`.
-3. **Settings → Environment Variables** добавить `TMDB_API_KEY` — значение ключа TMDB
-   (подходит и короткий API Key, и длинный Read Access Token). Больше нигде ключ не нужен.
-4. Задеплоить. Приложение окажется на `film-table.vercel.app`.
-5. Проверить, что прокси жив:
-   ```bash
-   curl -s "https://film-table.vercel.app/api/tmdb?path=search/movie&query=the+matrix" | head -c 200
-   ```
-6. Если домен получился другим — поправить `NEW_HOME` в
-   `src/components/MigrationBanner.tsx` и `VITE_API_BASE` в `.github/workflows/deploy.yml`.
-
-### Что произойдёт с данными пользователей
-
-`localStorage` привязан к домену и на новый домен **не переезжает**. Библиотека, собранная
-на `mrwd.github.io`, там и останется. Для этого сделан баннер на старом адресе: он
-объясняет ситуацию и отправляет в Профиль → Export, а на новом адресе нужно сделать Import.
-
-Старый адрес продолжает работать: GitHub Pages остаётся, а его сборка получает
-`VITE_API_BASE`, указывающий на прокси Vercel (CORS это разрешает).
+Переход по адресу, который отличается **только хэшем**, страницу не перезагружает:
+приложение остаётся с прежним состоянием в памяти, и подложенные в `localStorage` данные
+не подхватываются. Нужен явный `location.reload()`.
 
 ## Локальная проверка прокси без деплоя
 
 ```bash
-echo 'TMDB_API_KEY=<ключ>' > .env.local          # файл в .gitignore
-node --env-file=.env.local scripts/dev-api.mjs   # прокси на :3001
-VITE_API_BASE=http://localhost:3001 npx vite     # фронт
+echo 'TMDB_API_KEY=<ключ>' > .env.local             # файл в .gitignore
+node --env-file=.env.local scripts/dev-api.mjs      # прокси на :3001
+VITE_API_BASE=http://localhost:3001 npx vite        # фронт
 ```
 
 Что стоит проверить (всё это уже ловило реальные дефекты):
