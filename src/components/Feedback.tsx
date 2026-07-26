@@ -25,15 +25,15 @@ export function Feedback() {
   return (
     <div className="feedback">
       <p className="support-text">
-        Found a bug, or a show the catalogue gets wrong? Tell me — it is the only way I
-        hear about it.
+        Something broken, or something missing? Both are worth writing — a bug, a wish,
+        or a show the catalogue gets wrong. It is the only way I hear about any of it.
       </p>
 
       <textarea
         className="feedback-box"
         rows={4}
         value={text}
-        placeholder="What happened, and what you expected instead…"
+        placeholder="What went wrong, or what you wish it did…"
         onChange={(e) => setText(e.target.value)}
       />
 
