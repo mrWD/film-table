@@ -1,6 +1,6 @@
 // Minimal TMDB proxy. Its only jobs: keep the API key out of the client bundle,
 // let Vercel's edge cache absorb repeat queries, and refuse anything that is not
-// a read-only movie lookup. CommonJS on purpose — the repo has no "type": "module".
+// a read-only movie lookup.
 
 const TMDB = 'https://api.themoviedb.org/3/'
 
@@ -36,24 +36,19 @@ function originAllowed(origin, req) {
   } catch {
     return false
   }
+  // Dev servers pick arbitrary ports, so allow any loopback host.
+  if (/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return true
+
   const self = String(req.headers['x-forwarded-host'] ?? req.headers.host ?? '')
   const extra = String(process.env.ALLOWED_ORIGINS ?? '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
-  const allowed = new Set([
-    self,
-    'mrwd.github.io',
-    'localhost:5173',
-    'localhost:4173',
-    '127.0.0.1:5173',
-    '127.0.0.1:4173',
-    ...extra,
-  ])
+  const allowed = new Set([self, 'mrwd.github.io', ...extra])
   return allowed.has(host)
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   const origin = req.headers.origin
   const allowed = originAllowed(origin, req)
   if (origin && allowed) {

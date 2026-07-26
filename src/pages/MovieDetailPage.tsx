@@ -153,7 +153,7 @@ export default function MovieDetailPage() {
             <IconTrash size={16} /> Remove from library
           </button>
         )}
-        <p className="attribution">Movie data from Cinemeta and the iTunes Search API</p>
+        <p className="attribution">Movie data from TMDB, Cinemeta and the iTunes Search API</p>
       </div>
     </div>
   )

@@ -105,14 +105,24 @@ git push          # через ~1 минуту изменения на прод�
 - Нет облачной синхронизации (принципиально нет бэкенда) — есть ручной бэкап.
 - В сторы (APK/IPA) тот же код можно упаковать через Capacitor.
 
+## Документация
+
+| Файл | О чём |
+|---|---|
+| [CLAUDE.md](CLAUDE.md) | краткий контекст проекта, принципы, состояние веток |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | структура кода, модель данных, алгоритмы |
+| [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md) | API и их квирки, подтверждённые замерами |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | почему сделано так, и грабли, которые уже прошли |
+| [docs/DEPLOY.md](docs/DEPLOY.md) | GitHub Pages, переезд на Vercel, работа с ключом |
+| [docs/PLAN.md](docs/PLAN.md) | исходный план (исторический документ) |
+
 ## Структура
 
 ```
-src/
-  lib/        типы, TVmaze/iTunes клиенты (+JSONP-fallback), форматирование
-  store/      zustand: library (persist), кэш шоу, explore, ui (тосты/диалоги)
-  store/selectors.ts   вся логика: следующий эпизод, +N, секции, upcoming, статистика
-  components/ иконки, UI-примитивы, карточки
-  pages/      Shows / Movies / Explore / ShowDetail / MovieDetail / Profile
-docs/PLAN.md  план и дизайн-решения
+api/tmdb/     serverless-прокси к TMDB (Vercel)
+src/lib/      типы, клиенты API, сведение жанров, форматирование
+src/store/    zustand: library и cache (persist), explore, recommend, theme, ui
+              selectors.ts — вся производная логика чистыми функциями
+src/components/ иконки, UI-примитивы, карточки, поддержка проекта
+src/pages/    Shows / Movies / Explore / ShowDetail / MovieDetail / Profile
 ```
