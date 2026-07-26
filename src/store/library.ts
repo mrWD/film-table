@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { BackupFile, Episode, Movie, MovieResult, TrackedShow } from '../lib/types'
+import { useStats } from './stats'
 
 interface LibraryState {
   shows: Record<number, TrackedShow>
@@ -61,7 +62,10 @@ export const useLibrary = create<LibraryState>()(
           return { shows: { ...s.shows, [id]: { ...t, status } } }
         }),
 
-      setEpisodeWatched: (showId, episodeId, watched) =>
+      setEpisodeWatched: (showId, episodeId, watched) => {
+        // Side effects stay outside the updater: it must be pure, and StrictMode
+        // runs it twice, which would double every counter.
+        if (watched) useStats.getState().recordCheckIn()
         set((s) => {
           const t = s.shows[showId]
           if (!t) return s
@@ -71,7 +75,8 @@ export const useLibrary = create<LibraryState>()(
           const next: TrackedShow = { ...t, watched: w }
           next.lastWatchedAt = recomputeLastWatched(next)
           return { shows: { ...s.shows, [showId]: next } }
-        }),
+        })
+      },
 
       setEpisodesWatched: (showId, episodeIds, watched) =>
         set((s) => {
@@ -113,7 +118,8 @@ export const useLibrary = create<LibraryState>()(
           return { movies: { ...s.movies, [m.id]: movie } }
         }),
 
-      setMovieStatus: (id, status) =>
+      setMovieStatus: (id, status) => {
+        if (status === 'watched') useStats.getState().recordMovieMarked()
         set((s) => {
           const m = s.movies[id]
           if (!m) return s
@@ -123,7 +129,8 @@ export const useLibrary = create<LibraryState>()(
               [id]: { ...m, status, watchedAt: status === 'watched' ? Date.now() : undefined },
             },
           }
-        }),
+        })
+      },
 
       /** Search results carry only a poster and a year; details arrive later. */
       updateMovieMeta: (id, patch) =>

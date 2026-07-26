@@ -1,6 +1,7 @@
 import type { Episode, MovieResult, ShowSummary } from './types'
 import { stripHtml, yearOf } from './format'
 import { lookupMovieTmdb, searchMoviesTmdb } from './tmdb'
+import { stats } from '../store/stats'
 
 const TVMAZE = 'https://api.tvmaze.com'
 const CINEMETA = 'https://v3-cinemeta.strem.io'
@@ -136,7 +137,10 @@ export async function showByImdb(imdb: string): Promise<ShowSummary | null> {
 
 export async function searchShows(query: string): Promise<ShowSummary[]> {
   const [tvmaze, extra] = await Promise.all([
-    searchShowsTvmaze(query),
+    searchShowsTvmaze(query).then((r) => {
+      stats.source('tvmaze')
+      return r
+    }),
     withTimeout(searchSeriesCinemeta(query), 2500, [] as CinemetaMeta[]),
   ])
 
@@ -356,12 +360,21 @@ export async function searchMovies(query: string): Promise<MovieResult[]> {
   // TMDB (through our proxy) has the best movie catalogue; when the proxy is
   // deployed and keyed it simply wins. Otherwise the keyless pair below serves.
   const viaTmdb = await withTimeout(searchMoviesTmdb(query), 3000, null)
-  if (viaTmdb && viaTmdb.length > 0) return viaTmdb
+  if (viaTmdb && viaTmdb.length > 0) {
+    stats.source('tmdb')
+    return viaTmdb
+  }
 
   const [cinemeta, itunes] = await Promise.all([
     cinemetaCatalog('movie', query)
-      .then((metas) => metas.map(mapCinemetaMovie))
-      .catch(() => [] as MovieResult[]),
+      .then((metas) => {
+        stats.source('cinemeta')
+        return metas.map(mapCinemetaMovie)
+      })
+      .catch(() => {
+        stats.error('cinemeta')
+        return [] as MovieResult[]
+      }),
     withTimeout(searchMoviesItunes(query), 2000, [] as MovieResult[]),
   ])
 

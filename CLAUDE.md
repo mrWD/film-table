@@ -57,6 +57,7 @@ VITE_API_BASE=http://localhost:3001 npx vite        # фронт, знающий
   `star trek` — они ловили реальные баги источников;
 - чек-ин эпизода с карточки и на странице сериала, Undo;
 - Explore без запроса: секции For you, Coming to theaters, Airing tonight;
+- скрытая страница `/#/insights` (счётчики использования, ни с чем не связана в навигации);
 - обе темы и **горизонтальное переполнение** (`document.documentElement.scrollWidth`
   против `clientWidth` — должно быть 0, уже ловило баг с CSS Grid);
 - консоль без ошибок.

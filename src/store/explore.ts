@@ -8,6 +8,7 @@ import {
   type ScheduleItem,
 } from '../lib/api'
 import { upcomingMoviesTmdb } from '../lib/tmdb'
+import { stats } from './stats'
 
 export type ExploreMode = 'all' | 'shows' | 'movies'
 
@@ -96,6 +97,7 @@ export const useExplore = create<ExploreState>((set, get) => ({
       return
     }
     set({ searching: true, searchError: false })
+    stats.search()
     try {
       if (mode === 'shows') {
         const results = await searchShows(term)
