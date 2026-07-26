@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware'
 import type { BackupFile, Episode, Movie, MovieResult, TrackedShow } from '../lib/types'
 import { useStats } from './stats'
+import { useUi } from './ui'
 
 interface LibraryState {
   shows: Record<number, TrackedShow>
@@ -28,6 +29,47 @@ interface LibraryState {
 function recomputeLastWatched(t: TrackedShow): number | undefined {
   const times = Object.values(t.watched)
   return times.length ? Math.max(...times) : undefined
+}
+
+/** Drops the one field that costs more than everything else in an entry combined. */
+function withoutDescriptions(movies: Record<string, Movie>): Record<string, Movie> {
+  const out: Record<string, Movie> = {}
+  for (const [id, movie] of Object.entries(movies)) {
+    if (movie.description === undefined) {
+      out[id] = movie
+      continue
+    }
+    const { description: _drop, ...rest } = movie
+    out[id] = rest as Movie
+  }
+  return out
+}
+
+/**
+ * localStorage has a hard ceiling — measured at 4.94 MB in Chromium — and a write past it
+ * throws QuotaExceededError. Unguarded, the exception escapes mid-update and the change is
+ * simply lost, which the person only discovers later when an entry is missing. Catch it
+ * and say so, once.
+ */
+let quotaWarned = false
+
+const guardedStorage: StateStorage = {
+  getItem: (name) => localStorage.getItem(name),
+  setItem: (name, value) => {
+    try {
+      localStorage.setItem(name, value)
+      quotaWarned = false
+    } catch (err) {
+      const errName = err instanceof Error ? err.name : ''
+      if (errName !== 'QuotaExceededError' && errName !== 'NS_ERROR_DOM_QUOTA_REACHED') {
+        throw err
+      }
+      if (quotaWarned) return
+      quotaWarned = true
+      useUi.getState().showToast('Storage is full — export a backup from your profile')
+    }
+  },
+  removeItem: (name) => localStorage.removeItem(name),
 }
 
 export const useLibrary = create<LibraryState>()(
@@ -153,7 +195,18 @@ export const useLibrary = create<LibraryState>()(
 
       resetAll: () => set({ shows: {}, movies: {} }),
     }),
-    { name: 'filmtable-library-v1', version: 1 },
+    {
+      name: 'filmtable-library-v1',
+      version: 1,
+      storage: createJSONStorage(() => guardedStorage),
+      // A movie's overview is re-fetched on its detail page and never shown in a list, so
+      // writing it only inflates the library. Shows are unaffected: they are stored by id.
+      partialize: (s) => ({
+        shows: s.shows,
+        movies: withoutDescriptions(s.movies),
+        watchGrid: s.watchGrid,
+      }),
+    },
   ),
 )
 

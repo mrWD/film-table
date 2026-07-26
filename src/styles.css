@@ -1809,3 +1809,52 @@ img {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ============ install hint ============ */
+
+/* Not a growth banner: installing is what keeps the library from being cleared. */
+.installhint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 10px 0 14px;
+  padding: 13px 12px 13px 14px;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+}
+
+.installhint-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.installhint-body strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.installhint-body p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink2);
+}
+
+.installhint-go {
+  margin-top: 10px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.installhint-close {
+  color: var(--ink3);
+  padding: 2px;
+  flex-shrink: 0;
+}

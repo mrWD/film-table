@@ -21,6 +21,8 @@ function today(): string {
 interface StatsState {
   firstVisit: number | null
   lastVisit: number | null
+  /** Backups are the only defence against the browser clearing storage. */
+  lastExportAt: number | null
   sessions: number
   /** YYYY-MM-DD of days the app was opened, newest last. */
   activeDays: string[]
@@ -33,6 +35,7 @@ interface StatsState {
   moviesMarked: number
   recommendationsShown: number
 
+  recordExport: () => void
   startSession: () => void
   recordRoute: (route: string) => void
   recordSearch: () => void
@@ -47,6 +50,7 @@ interface StatsState {
 const EMPTY = {
   firstVisit: null,
   lastVisit: null,
+  lastExportAt: null as number | null,
   sessions: 0,
   activeDays: [] as string[],
   routeViews: {} as Record<string, number>,
@@ -62,6 +66,8 @@ export const useStats = create<StatsState>()(
   persist(
     (set) => ({
       ...EMPTY,
+
+      recordExport: () => set({ lastExportAt: Date.now() }),
 
       startSession: () =>
         set((s) => {
