@@ -31,7 +31,7 @@ Vercel хостит статику и функцию под одним доме�
 4. Задеплоить. Приложение окажется на `film-table.vercel.app`.
 5. Проверить, что прокси жив:
    ```bash
-   curl -s "https://film-table.vercel.app/api/tmdb/search/movie?query=the+matrix" | head -c 200
+   curl -s "https://film-table.vercel.app/api/tmdb?path=search/movie&query=the+matrix" | head -c 200
    ```
 6. Если домен получился другим — поправить `NEW_HOME` в
    `src/components/MigrationBanner.tsx` и `VITE_API_BASE` в `.github/workflows/deploy.yml`.
@@ -56,17 +56,17 @@ VITE_API_BASE=http://localhost:3001 npx vite     # фронт
 Что стоит проверить (всё это уже ловило реальные дефекты):
 
 ```bash
-curl -s "localhost:3001/api/tmdb/search/movie?query=the+matrix"            # 200, есть The Matrix
-curl -s -o /dev/null -w "%{http_code}\n" "localhost:3001/api/tmdb/account/lists"   # 403
+curl -s "localhost:3001/api/tmdb?path=search/movie&query=the+matrix"       # 200, есть The Matrix
+curl -s -o /dev/null -w "%{http_code}\n" "localhost:3001/api/tmdb?path=account/lists"  # 403
 curl -s -o /dev/null -w "%{http_code}\n" -H "Origin: https://evil.example" \
-     "localhost:3001/api/tmdb/search/movie?query=x"                        # 403
-curl -s "localhost:3001/api/tmdb/movie/603" | grep -c "eyJhbGci"           # 0 — ключ не течёт
+     "localhost:3001/api/tmdb?path=search/movie&query=x"                   # 403
+curl -s "localhost:3001/api/tmdb?path=movie/603" | grep -c "eyJhbGci"      # 0 — ключ не течёт
 ```
 
 ## Альтернативные хостинги
 
 Проект — статика плюс одна функция, поэтому переносится и на Netlify, и на Cloudflare
-Pages. Ключевое требование: функция должна отвечать по пути `/api/tmdb/*`, иначе клиент
+Pages. Ключевое требование: функция должна отвечать по пути `/api/tmdb`, иначе клиент
 её не найдёт и молча уйдёт на keyless-источники.
 
 ## Правила безопасности

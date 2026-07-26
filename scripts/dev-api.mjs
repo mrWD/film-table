@@ -2,21 +2,20 @@
 // Usage: node --env-file=.env.local scripts/dev-api.mjs   (then VITE_API_BASE=http://localhost:3001)
 import { createServer } from 'node:http'
 
-const { default: handler } = await import('../api/tmdb/[...path].js')
+const { default: handler } = await import('../api/tmdb.js')
 
 const PORT = Number(process.env.API_PORT ?? 3001)
 
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`)
-  const match = url.pathname.match(/^\/api\/tmdb\/(.+)$/)
-  if (!match) {
+  if (url.pathname !== '/api/tmdb') {
     res.statusCode = 404
     res.end(JSON.stringify({ error: 'not found' }))
     return
   }
 
   // Mimic the shape Vercel hands to the function
-  req.query = { path: match[1].split('/') }
+  req.query = {}
   for (const [k, v] of url.searchParams) req.query[k] = v
 
   res.status = (code) => {

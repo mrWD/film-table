@@ -1,7 +1,7 @@
 import type { MovieResult } from './types'
 
 /**
- * Client for our /api/tmdb proxy (see api/tmdb/[...path].js). The proxy may be
+ * Client for our /api/tmdb proxy (see api/tmdb.js). The proxy may be
  * absent (GitHub Pages build, local dev) or deployed without a key — both look
  * like 404/503/network failure here, after which this module goes quiet for the
  * session and callers fall back to the keyless sources.
@@ -17,9 +17,9 @@ export function tmdbEnabled(): boolean {
 
 async function tmdbGet<T>(path: string, params: Record<string, string> = {}): Promise<T | null> {
   if (disabled) return null
-  const qs = new URLSearchParams(params).toString()
+  const qs = new URLSearchParams({ path, ...params }).toString()
   try {
-    const res = await fetch(`${API_BASE}/api/tmdb/${path}${qs ? `?${qs}` : ''}`)
+    const res = await fetch(`${API_BASE}/api/tmdb?${qs}`)
     if (res.status === 404 || res.status === 403 || res.status === 503) {
       disabled = true
       return null

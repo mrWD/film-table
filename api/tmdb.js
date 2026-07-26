@@ -1,6 +1,10 @@
 // Minimal TMDB proxy. Its only jobs: keep the API key out of the client bundle,
 // let Vercel's edge cache absorb repeat queries, and refuse anything that is not
 // a read-only movie lookup.
+//
+// The upstream path arrives as ?path=search/movie rather than as URL segments:
+// a catch-all file (api/tmdb/[...path].js) only ever matched one segment on
+// Vercel, so /api/tmdb/search/movie 404'd before reaching this code.
 
 const TMDB = 'https://api.themoviedb.org/3/'
 
@@ -72,7 +76,7 @@ export default async function handler(req, res) {
   }
 
   const raw = req.query.path
-  const path = Array.isArray(raw) ? raw.join('/') : String(raw ?? '')
+  const path = (Array.isArray(raw) ? raw.join('/') : String(raw ?? '')).replace(/^\/+/, '')
   if (!isAllowedPath(path)) {
     res.status(403).json({ error: 'path not allowed' })
     return

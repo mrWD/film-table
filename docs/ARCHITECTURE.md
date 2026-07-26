@@ -10,7 +10,7 @@ PWA — `vite-plugin-pwa` (manifest + service worker). Автотестов не
 ## Карта кода
 
 ```
-api/tmdb/[...path].js   serverless-прокси к TMDB (только на Vercel)
+api/tmdb.js             serverless-прокси к TMDB (только на Vercel)
 scripts/dev-api.mjs     тот же прокси локально, для проверки без деплоя
 scripts/gen-icons.mjs   PNG-иконки из favicon.svg
 
@@ -95,11 +95,15 @@ Content-based, целиком на клиенте (`store/recommend.ts`):
 
 ## Прокси к TMDB
 
-`api/tmdb/[...path].js` — ESM-функция Vercel (в `package.json` стоит `"type": "module"`,
+`api/tmdb.js` — ESM-функция Vercel (в `package.json` стоит `"type": "module"`,
 CommonJS там не заработает). Задачи ровно три: не пускать ключ в браузер, разрешать только
 read-only пути к фильмам, кэшировать ответы на edge. Проверяет `Origin` (любой loopback +
 прод-домены), отдаёт 403 на неразрешённый путь, 503 если ключ не задан — клиент понимает
 503 как «TMDB здесь нет» и переключается на keyless-источники.
+
+Путь к TMDB передаётся параметром: `/api/tmdb?path=search/movie&query=...`, а не
+сегментами URL. Catch-all файл (`api/tmdb/[...path].js`) на Vercel сопоставлялся только с
+одним сегментом, из-за чего `/api/tmdb/search/movie` отдавал 404, не доходя до функции.
 
 Изображения TMDB отдаются напрямую с `image.tmdb.org`. **Проксировать картинки через себя
 не нужно** — это превратило бы нас из «ссылающегося» в «распространителя» чужого контента.
