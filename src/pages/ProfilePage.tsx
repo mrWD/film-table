@@ -6,6 +6,8 @@ import { useUi } from '../store/ui'
 import { buildStats } from '../store/selectors'
 import { useTheme, type ThemeChoice } from '../store/theme'
 import { useStats } from '../store/stats'
+import { COUNTRIES, useRegion } from '../store/region'
+import { YearReview } from '../components/YearReview'
 import { AutoBackup } from '../components/AutoBackup'
 import { SupportLinks } from '../components/Support'
 import { Feedback } from '../components/Feedback'
@@ -40,6 +42,8 @@ export default function ProfilePage() {
   const entries = useShowCache((s) => s.entries)
   const showToast = useUi((s) => s.showToast)
   const askConfirm = useUi((s) => s.askConfirm)
+  const country = useRegion((s) => s.country)
+  const setCountry = useRegion((s) => s.setCountry)
   const theme = useTheme((s) => s.theme)
   const setTheme = useTheme((s) => s.setTheme)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -111,7 +115,7 @@ export default function ProfilePage() {
       <div className="stats">
         <div className="stat">
           <span className="stat-num">{formatBigDuration(stats.tvMinutes)}</span>
-          <span className="stat-label">TV TIME</span>
+          <span className="stat-label">WATCH TIME</span>
         </div>
         <div className="stat">
           <span className="stat-num">{stats.episodesWatched}</span>
@@ -167,6 +171,25 @@ export default function ProfilePage() {
       )}
 
       <section>
+        <YearReview />
+
+        <h2 className="h2">Where to watch</h2>
+        <p className="chips-hint">
+          Streaming availability is licensed per country, so it needs to know yours.
+        </p>
+        <select
+          className="regionselect"
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          aria-label="Country for streaming availability"
+        >
+          {COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+
         <h2 className="h2">Appearance</h2>
         <div className="chips">
           {(['system', 'light', 'dark'] as ThemeChoice[]).map((t) => (

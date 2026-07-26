@@ -115,3 +115,86 @@ export async function upcomingMoviesTmdb(): Promise<MovieResult[] | null> {
     .map(mapMovie)
     .filter((m): m is MovieResult => m !== null)
 }
+
+// ---------- where to watch ----------
+
+/**
+ * Streaming availability, from TMDB's JustWatch feed. Two things it is not: a global
+ * answer, and a permanent one. Availability is per country and moves with licensing
+ * deals, so the country has to come from the person and the answer is cached in hours.
+ *
+ * TMDB requires the JustWatch attribution wherever this data appears — see WhereToWatch.
+ */
+
+export interface Provider {
+  name: string
+  kind: 'stream' | 'rent' | 'buy'
+}
+
+interface ProviderEntry {
+  provider_name?: string
+}
+
+interface ProviderCountry {
+  flatrate?: ProviderEntry[]
+  rent?: ProviderEntry[]
+  buy?: ProviderEntry[]
+  link?: string
+}
+
+export interface Availability {
+  providers: Provider[]
+  /** TMDB's own page for this title, which JustWatch's terms prefer we link to. */
+  link: string | null
+}
+
+function collect(country: ProviderCountry | undefined): Availability {
+  if (!country) return { providers: [], link: null }
+  const seen = new Set<string>()
+  const providers: Provider[] = []
+  const push = (list: ProviderEntry[] | undefined, kind: Provider['kind']) => {
+    for (const p of list ?? []) {
+      const name = p.provider_name
+      // A service offering both a subscription and a rental should be named once, and
+      // subscription is what people are actually looking for.
+      if (!name || seen.has(name)) continue
+      seen.add(name)
+      providers.push({ name, kind })
+    }
+  }
+  push(country.flatrate, 'stream')
+  push(country.rent, 'rent')
+  push(country.buy, 'buy')
+  return { providers, link: country.link ?? null }
+}
+
+export async function movieAvailability(
+  tmdbId: string,
+  country: string,
+): Promise<Availability | null> {
+  const id = tmdbId.replace(/^tmdb:/, '')
+  if (!/^\d+$/.test(id)) return null
+  const data = await tmdbGet<{ results?: Record<string, ProviderCountry> }>(
+    `movie/${id}/watch/providers`,
+  )
+  if (!data) return null
+  return collect(data.results?.[country])
+}
+
+/** Shows are tracked by TVmaze id here, so TMDB has to be reached through IMDb. */
+export async function showAvailability(
+  imdbId: string,
+  country: string,
+): Promise<Availability | null> {
+  if (!/^tt\d+$/.test(imdbId)) return null
+  const found = await tmdbGet<{ tv_results?: { id: number }[] }>(`find/${imdbId}`, {
+    external_source: 'imdb_id',
+  })
+  const tmdbId = found?.tv_results?.[0]?.id
+  if (!tmdbId) return null
+  const data = await tmdbGet<{ results?: Record<string, ProviderCountry> }>(
+    `tv/${tmdbId}/watch/providers`,
+  )
+  if (!data) return null
+  return collect(data.results?.[country])
+}

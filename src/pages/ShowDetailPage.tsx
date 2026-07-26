@@ -23,6 +23,7 @@ import {
   IconStop,
   IconTrash,
 } from '../components/Icons'
+import { WhereToWatch } from '../components/WhereToWatch'
 
 export default function ShowDetailPage() {
   const { id } = useParams()
@@ -216,6 +217,8 @@ export default function ShowDetailPage() {
             {show.summary}
           </p>
         )}
+
+        <WhereToWatch imdbId={show.imdbId} />
 
         <h2 className="h2">Episodes</h2>
         {loadingEpisodes && (

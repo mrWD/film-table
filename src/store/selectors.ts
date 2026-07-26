@@ -244,3 +244,100 @@ export function buildStats(
   }
   return { episodesWatched, tvMinutes, moviesWatched, movieMinutes }
 }
+
+// ---------- year in review ----------
+
+/**
+ * A year's worth of watching, computed from the library alone.
+ *
+ * Every check-in already carries the timestamp it happened at, so this needs no journal
+ * and no server — the numbers were always there, just never added up. Titles without a
+ * cached episode list still count: the episode is known to be watched even when its
+ * runtime is not, and dropping it would understate the year.
+ */
+
+export interface YearReview {
+  year: number
+  episodes: number
+  minutes: number
+  movies: number
+  movieMinutes: number
+  /** Shows by episodes watched in this year, heaviest first. */
+  topShows: { id: number; name: string; episodes: number }[]
+  /** Twelve counts, January first — enough for a shape, not a chart library. */
+  byMonth: number[]
+  busiestMonth: number | null
+}
+
+export function yearsWithActivity(
+  shows: Record<number, TrackedShow>,
+  movies: Record<string, Movie>,
+): number[] {
+  const years = new Set<number>()
+  for (const tracked of Object.values(shows)) {
+    for (const at of Object.values(tracked.watched)) years.add(new Date(at).getFullYear())
+  }
+  for (const m of Object.values(movies)) {
+    if (m.status === 'watched' && m.watchedAt) years.add(new Date(m.watchedAt).getFullYear())
+  }
+  return [...years].sort((a, b) => b - a)
+}
+
+export function buildYearReview(
+  shows: Record<number, TrackedShow>,
+  entries: Record<number, ShowCacheEntry>,
+  movies: Record<string, Movie>,
+  year: number,
+): YearReview {
+  let episodes = 0
+  let minutes = 0
+  const byMonth = new Array(12).fill(0) as number[]
+  const perShow: { id: number; name: string; episodes: number }[] = []
+
+  for (const tracked of Object.values(shows)) {
+    const entry = entries[tracked.id]
+    const runtimeOf = (episodeId: number): number => {
+      const ep = entry?.episodes.find((e) => e.id === episodeId)
+      return ep?.runtime ?? entry?.show.averageRuntime ?? DEFAULT_RUNTIME
+    }
+    let inThisShow = 0
+    for (const [episodeId, at] of Object.entries(tracked.watched)) {
+      const d = new Date(at)
+      if (d.getFullYear() !== year) continue
+      episodes += 1
+      inThisShow += 1
+      byMonth[d.getMonth()] += 1
+      minutes += runtimeOf(Number(episodeId))
+    }
+    if (inThisShow > 0) {
+      perShow.push({
+        id: tracked.id,
+        name: entry?.show.name ?? `Show ${tracked.id}`,
+        episodes: inThisShow,
+      })
+    }
+  }
+
+  let movieCount = 0
+  let movieMinutes = 0
+  for (const m of Object.values(movies)) {
+    if (m.status !== 'watched' || !m.watchedAt) continue
+    const d = new Date(m.watchedAt)
+    if (d.getFullYear() !== year) continue
+    movieCount += 1
+    movieMinutes += m.runtimeMin ?? 0
+    byMonth[d.getMonth()] += 1
+  }
+
+  const busiest = byMonth.reduce((best, v, i) => (v > byMonth[best] ? i : best), 0)
+  return {
+    year,
+    episodes,
+    minutes,
+    movies: movieCount,
+    movieMinutes,
+    topShows: perShow.sort((a, b) => b.episodes - a.episodes).slice(0, 5),
+    byMonth,
+    busiestMonth: byMonth[busiest] > 0 ? busiest : null,
+  }
+}

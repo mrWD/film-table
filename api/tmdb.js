@@ -14,13 +14,19 @@ function isAllowedPath(path) {
     path === 'search/movie' ||
     path === 'genre/movie/list' ||
     /^movie\/[a-z0-9_]+$/i.test(path) || // movie/{id}, movie/upcoming, movie/popular
-    /^movie\/\d+\/(recommendations|similar|release_dates)$/.test(path) ||
+    /^movie\/\d+\/(recommendations|similar|release_dates|watch\/providers)$/.test(path) ||
+    /^tv\/\d+\/watch\/providers$/.test(path) ||
+    // Bridges a TVmaze show to its TMDB id; shows are tracked by TVmaze id here.
+    /^find\/tt\d+$/.test(path) ||
     /^trending\/movie\/(day|week)$/.test(path)
   )
 }
 
 /** Longer-lived answers get longer edge cache. Values are seconds. */
 function cacheFor(path) {
+  // Availability moves when licensing deals do — days, not months.
+  if (/watch\/providers$/.test(path)) return 'public, s-maxage=21600, stale-while-revalidate=86400'
+  if (/^find\/tt\d+$/.test(path)) return 'public, s-maxage=604800, stale-while-revalidate=2592000'
   if (/^movie\/\d+/.test(path)) return 'public, s-maxage=86400, stale-while-revalidate=604800'
   if (path === 'movie/upcoming' || path === 'genre/movie/list')
     return 'public, s-maxage=21600, stale-while-revalidate=86400'

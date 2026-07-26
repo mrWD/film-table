@@ -7,6 +7,7 @@ import { useUi } from '../store/ui'
 import { formatDateShort, formatRuntime, yearOf } from '../lib/format'
 import { Poster, useNow } from '../components/ui'
 import { IconBack, IconCheck, IconPlus, IconTrash } from '../components/Icons'
+import { WhereToWatch } from '../components/WhereToWatch'
 
 export default function MovieDetailPage() {
   const { id } = useParams()
@@ -132,6 +133,8 @@ export default function MovieDetailPage() {
         </div>
 
         {movie.description && <p className="detail-about open">{movie.description}</p>}
+
+        <WhereToWatch movieId={movie.id} />
 
         {inLib && (
           <button
