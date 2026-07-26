@@ -1,0 +1,35 @@
+- generic [ref=f10e3]:
+  - generic [ref=f10e4]:
+    - generic [ref=f10e5]:
+      - button "PLAYING" [ref=f10e6] [cursor=pointer]
+      - button "BACKLOG" [ref=f10e7] [cursor=pointer]
+      - button "PLAYED" [ref=f10e8] [cursor=pointer]
+      - button "WATCH" [ref=f10e9] [cursor=pointer]
+    - link "Elden Ring Elden Ring 2022 • PC, PS, Xbox Action, RPG 95" [ref=f10e11] [cursor=pointer]:
+      - /url: "#/game/rawg%3A326243"
+      - img "Elden Ring" [ref=f10e12]
+      - generic [ref=f10e13]:
+        - generic [ref=f10e14]: Elden Ring
+        - generic [ref=f10e15]: 2022 • PC, PS, Xbox
+        - generic [ref=f10e16]: Action, RPG
+      - generic [ref=f10e17]: "95"
+  - navigation [ref=f10e19]:
+    - generic [ref=f10e20]:
+      - link "Library" [ref=f10e21] [cursor=pointer]:
+        - /url: "#/library"
+      - link "Explore" [ref=f10e26] [cursor=pointer]:
+        - /url: "#/explore"
+      - link "Profile" [ref=f10e31] [cursor=pointer]:
+        - /url: "#/profile"
+  - generic [ref=f10e36]:
+    - generic [ref=f10e37]:
+      - link:
+        - /url: https://buymeacoffee.com/ipupok
+        - generic: Buy Me a Coffee
+      - link:
+        - /url: https://ko-fi.com/ipupok
+        - generic: Ko-fi
+      - link:
+        - /url: https://www.paypal.com/donate/?hosted_button_id=VBNDB5AHYLGCY
+        - generic: PayPal
+    - button "Support FilmTable" [ref=f10e38] [cursor=pointer]

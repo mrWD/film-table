@@ -1738,3 +1738,74 @@ img {
     margin: 0 auto;
   }
 }
+
+/* ============ feedback ============ */
+
+/* No backend takes this text — the button hands it to the mail app. */
+.feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feedback-box {
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 12px;
+  border: 1.6px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.feedback-box::placeholder {
+  color: var(--ink3);
+}
+
+.feedback-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 11px 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.feedback-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.feedback-contacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.feedback-contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1.6px solid var(--line);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink2);
+  min-width: 0;
+}
+
+.feedback-contact span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

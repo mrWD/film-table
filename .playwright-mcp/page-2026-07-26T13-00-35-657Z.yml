@@ -1,0 +1,32 @@
+- generic [ref=f8e3]:
+  - generic [ref=f8e4]:
+    - generic [ref=f8e5]:
+      - button "PLAYING" [ref=f8e6] [cursor=pointer]
+      - button "BACKLOG" [ref=f8e7] [cursor=pointer]
+      - button "PLAYED" [ref=f8e8] [cursor=pointer]
+      - button "WATCH" [ref=f8e9] [cursor=pointer]
+    - generic [ref=f8e10]:
+      - heading "Nothing in progress" [level=3] [ref=f8e16]
+      - paragraph [ref=f8e17]: Games you start will show up here.
+      - link "Find games" [ref=f8e18] [cursor=pointer]:
+        - /url: "#/explore"
+  - navigation [ref=f8e19]:
+    - generic [ref=f8e20]:
+      - link "Library" [ref=f8e21] [cursor=pointer]:
+        - /url: "#/library"
+      - link "Explore" [ref=f8e26] [cursor=pointer]:
+        - /url: "#/explore"
+      - link "Profile" [ref=f8e31] [cursor=pointer]:
+        - /url: "#/profile"
+  - generic [ref=f8e36]:
+    - generic [ref=f8e37]:
+      - link:
+        - /url: https://buymeacoffee.com/ipupok
+        - generic: Buy Me a Coffee
+      - link:
+        - /url: https://ko-fi.com/ipupok
+        - generic: Ko-fi
+      - link:
+        - /url: https://www.paypal.com/donate/?hosted_button_id=VBNDB5AHYLGCY
+        - generic: PayPal
+    - button "Support FilmTable" [ref=f8e38] [cursor=pointer]
