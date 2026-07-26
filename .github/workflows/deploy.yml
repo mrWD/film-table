@@ -28,6 +28,8 @@ jobs:
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+          # The old origin talks to the TMDB proxy cross-origin (CORS allows it)
+          VITE_API_BASE: https://film-table.vercel.app
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

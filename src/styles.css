@@ -134,6 +134,37 @@ img {
   }
 }
 
+/* ============ migration banner ============ */
+
+.movebanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 10px 14px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.movebanner p {
+  margin: 0;
+  flex: 1;
+}
+
+.movebanner a {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.movebanner button {
+  color: var(--ink2);
+  padding: 2px;
+  display: inline-flex;
+}
+
 /* ============ top tabs ============ */
 
 .toptabs {

@@ -7,6 +7,7 @@ import {
   searchShows,
   type ScheduleItem,
 } from '../lib/api'
+import { upcomingMoviesTmdb } from '../lib/tmdb'
 
 export type ExploreMode = 'all' | 'shows' | 'movies'
 
@@ -48,6 +49,7 @@ interface ExploreState {
 
   tonight: ScheduleItem[]
   popular: ShowSummary[]
+  comingSoon: MovieResult[]
   discoverLoading: boolean
 
   setMode: (m: ExploreMode) => void
@@ -69,6 +71,7 @@ export const useExplore = create<ExploreState>((set, get) => ({
 
   tonight: [],
   popular: [],
+  comingSoon: [],
   discoverLoading: false,
 
   setMode: (mode) => {
@@ -123,6 +126,11 @@ export const useExplore = create<ExploreState>((set, get) => ({
   loadDiscover: async (now) => {
     if (get().tonight.length > 0 || get().discoverLoading) return
     set({ discoverLoading: true })
+    // Theatrical releases need the TMDB proxy; fire-and-forget so the keyless
+    // sections below never wait on it.
+    void upcomingMoviesTmdb().then((movies) => {
+      if (movies && movies.length > 0) set({ comingSoon: movies.slice(0, 6) })
+    })
     try {
       const tonightItems = await fetchSchedule(now)
       const dedupe = new Map<number, ScheduleItem>()

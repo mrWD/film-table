@@ -1,5 +1,6 @@
 import type { Episode, MovieResult, ShowSummary } from './types'
 import { stripHtml, yearOf } from './format'
+import { lookupMovieTmdb, searchMoviesTmdb } from './tmdb'
 
 const TVMAZE = 'https://api.tvmaze.com'
 const CINEMETA = 'https://v3-cinemeta.strem.io'
@@ -352,6 +353,11 @@ async function searchMoviesItunes(query: string): Promise<MovieResult[]> {
 }
 
 export async function searchMovies(query: string): Promise<MovieResult[]> {
+  // TMDB (through our proxy) has the best movie catalogue; when the proxy is
+  // deployed and keyed it simply wins. Otherwise the keyless pair below serves.
+  const viaTmdb = await withTimeout(searchMoviesTmdb(query), 3000, null)
+  if (viaTmdb && viaTmdb.length > 0) return viaTmdb
+
   const [cinemeta, itunes] = await Promise.all([
     cinemetaCatalog('movie', query)
       .then((metas) => metas.map(mapCinemetaMovie))
@@ -368,6 +374,9 @@ export async function searchMovies(query: string): Promise<MovieResult[]> {
 }
 
 export async function lookupMovie(id: string): Promise<MovieResult | null> {
+  if (id.startsWith('tmdb:')) {
+    return lookupMovieTmdb(id)
+  }
   if (id.startsWith('tt')) {
     const meta = await cinemetaMeta('movie', id)
     return meta ? mapCinemetaMovie(meta) : null

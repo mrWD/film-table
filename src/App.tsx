@@ -8,6 +8,7 @@ import MovieDetailPage from './pages/MovieDetailPage'
 import ProfilePage from './pages/ProfilePage'
 import { BottomNav, ConfirmHost, ScrollToTop, ToastHost } from './components/ui'
 import { SupportFab } from './components/Support'
+import { MigrationBanner } from './components/MigrationBanner'
 import { useLibrary } from './store/library'
 import { refreshShows } from './store/cache'
 import { watchSystemTheme } from './store/theme'
@@ -25,6 +26,7 @@ function Shell() {
   return (
     <div className={`app${isDetail ? ' on-detail' : ''}`}>
       <ScrollToTop />
+      <MigrationBanner />
       <Routes>
         <Route path="/" element={<Navigate to="/shows" replace />} />
         <Route path="/shows" element={<ShowsPage />} />

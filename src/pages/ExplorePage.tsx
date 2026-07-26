@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useExplore, type ExploreMode } from '../store/explore'
 import type { ScheduleItem } from '../lib/api'
-import type { ShowSummary } from '../lib/types'
+import type { MovieResult, ShowSummary } from '../lib/types'
 import { MovieResultRow, ShowResultRow, AddShowButton } from '../components/cards'
 import { Poster, SkeletonRows } from '../components/ui'
 import { useRecommend } from '../store/recommend'
@@ -26,6 +26,7 @@ export default function ExplorePage() {
     searchError,
     tonight,
     popular,
+    comingSoon,
     discoverLoading,
     loadDiscover,
   } = useExplore()
@@ -123,7 +124,7 @@ export default function ExplorePage() {
           )}
         </div>
       ) : (
-        <Discover tonight={tonight} popular={popular} loading={discoverLoading} />
+        <Discover tonight={tonight} popular={popular} comingSoon={comingSoon} loading={discoverLoading} />
       )}
     </div>
   )
@@ -174,15 +175,25 @@ function ForYou() {
 function Discover({
   tonight,
   popular,
+  comingSoon,
   loading,
 }: {
   tonight: ScheduleItem[]
   popular: ShowSummary[]
+  comingSoon: MovieResult[]
   loading: boolean
 }) {
   return (
     <>
       <ForYou />
+      {comingSoon.length > 0 && (
+        <section>
+          <h2 className="h2">Coming to theaters</h2>
+          {comingSoon.map((m) => (
+            <MovieResultRow key={m.id} result={m} />
+          ))}
+        </section>
+      )}
       <h2 className="h2">Airing tonight</h2>
       {tonight.length === 0 && loading && <SkeletonRows count={2} />}
       {tonight.slice(0, 6).map((item, i) => (
@@ -243,7 +254,7 @@ function Discover({
         <a href="https://www.tvmaze.com" target="_blank" rel="noreferrer">
           TVmaze
         </a>{' '}
-        · Movie data from Cinemeta and iTunes
+        · Movie data from TMDB, Cinemeta and iTunes
       </p>
     </>
   )

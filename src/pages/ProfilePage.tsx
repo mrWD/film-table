@@ -230,7 +230,14 @@ export default function ProfilePage() {
         <a href="https://www.tvmaze.com" target="_blank" rel="noreferrer">
           TVmaze
         </a>{' '}
-        (CC BY-SA) · movie data from Cinemeta and iTunes
+        (CC BY-SA) · movie data from{' '}
+        <a href="https://www.themoviedb.org" target="_blank" rel="noreferrer">
+          TMDB
+        </a>
+        , Cinemeta and iTunes
+      </p>
+      <p className="attribution">
+        This product uses the TMDB API but is not endorsed or certified by TMDB.
       </p>
     </div>
   )
