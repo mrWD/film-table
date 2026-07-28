@@ -274,6 +274,15 @@ export default function ProfilePage() {
         <SupportLinks />
       </section>
 
+      <section>
+        <h2 className="h2">More from the author</h2>
+        <p className="attribution">
+          <a href="https://mrwd.github.io/" target="_blank" rel="noreferrer">
+            All products &rarr;
+          </a>
+        </p>
+      </section>
+
       <p className="attribution">
         FilmTable · a free, fan-made, local-first tracker · not affiliated with TV Time or Whip
         Media
