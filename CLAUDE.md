@@ -1,104 +1,113 @@
-# FilmTable — контекст проекта
+# FilmTable — project context
 
-Этот файл читается автоматически в начале каждой сессии. Здесь — то, что нельзя
-вывести из кода: почему принято то или иное решение и на какие грабли уже наступали.
+This file is read automatically at the start of every session. It holds what
+cannot be derived from the code: why a given decision was made and which pitfalls
+have already been hit.
 
-Подробности вынесены в `docs/`:
+Details live in `docs/`:
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — структура кода, модель данных, потоки
-- [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md) — API, их квирки, что чем заменяется
-- [docs/DECISIONS.md](docs/DECISIONS.md) — принятые решения и их причины
-- [docs/PLAN.md](docs/PLAN.md) — исходный план (исторический документ)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — code structure, data model, flows
+- [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md) — the APIs, their quirks, what
+  substitutes for what
+- [docs/DECISIONS.md](docs/DECISIONS.md) — the decisions taken and their reasons
+- [docs/PLAN.md](docs/PLAN.md) — the original plan (a historical document)
 
-## Что это
+## What this is
 
-Личный трекер сериалов и фильмов, написанный после закрытия TV Time. PWA: один код
-работает на Android, iPhone и в вебе, ставится на домашний экран, работает офлайн.
+A personal TV series and movie tracker, written after TV Time shut down. A PWA:
+one codebase runs on Android, iPhone and the web, installs to the home screen and
+works offline.
 
-Владелец и единственный целевой пользователь на сегодня — **mrWD** (Viktor,
-`lvigtor@gmail.com`). Проект бесплатный, свободный, с кнопкой донатов.
+The owner and, as of today, the only target user is **mrWD** (Viktor,
+`lvigtor@gmail.com`). The project is free and open, with a donation button.
 
-**Прод:** <https://mrwd.github.io/film-table/> · **Репозиторий:** `mrWD/film-table`
+**Production:** <https://mrwd.github.io/film-table/> · **Repository:**
+`mrWD/film-table`
 
-## Главные принципы (нарушать только с явного согласия владельца)
+## Core principles (break only with the owner's explicit consent)
 
-1. **Нет бэкенда для пользовательских данных.** Библиотека живёт в `localStorage`
-   устройства. Никаких аккаунтов, никакой аналитики, никакого сбора данных. Единственный
-   серверный код — тонкий прокси к TMDB, который не хранит ничего.
-2. **Приложение обязано работать без ключей.** TMDB — улучшение, а не зависимость. Если
-   прокси недоступен или ключ не задан, поиск фильмов молча переключается на
-   Cinemeta/iTunes. Ломать этот фолбэк нельзя.
-3. **Своя визуальная идентичность.** Интерфейс изначально копировал TV Time и был
-   намеренно от него уведён (см. DECISIONS). Не возвращать их подписи секций, жёлтый
-   акцент и формат `S03 | E01`.
-4. **Секреты только в переменных окружения.** Ключ TMDB живёт в панели Vercel. В
-   репозиторий, в клиентский бандл и в чат он не попадает никогда.
+1. **No backend for user data.** The library lives in the device's
+   `localStorage`. No accounts, no analytics, no data collection. The only server
+   code is a thin proxy to TMDB, which stores nothing.
+2. **The app must work without keys.** TMDB is an enhancement, not a dependency.
+   If the proxy is unavailable or the key is unset, movie search silently switches
+   to Cinemeta/iTunes. That fallback must not be broken.
+3. **Its own visual identity.** The interface originally copied TV Time and was
+   deliberately steered away from it (see DECISIONS). Do not bring back their
+   section headings, yellow accent or the `S03 | E01` format.
+4. **Secrets only in environment variables.** The TMDB key lives in the Vercel
+   dashboard. It never goes into the repository, the client bundle or chat.
 
-## Как запускать
+## How to run
 
 ```bash
 npm install
-npm run dev                       # :5173, без TMDB — работает на Cinemeta/iTunes
+npm run dev                       # :5173, without TMDB — runs on Cinemeta/iTunes
 npm run build && npm run preview  # :4173
 
-# с TMDB: нужен .env.local с TMDB_API_KEY (файл в .gitignore)
-node --env-file=.env.local scripts/dev-api.mjs      # прокси на :3001
-VITE_API_BASE=http://localhost:3001 npx vite        # фронт, знающий про прокси
+# with TMDB: needs .env.local with TMDB_API_KEY (the file is in .gitignore)
+node --env-file=.env.local scripts/dev-api.mjs      # proxy on :3001
+VITE_API_BASE=http://localhost:3001 npx vite        # a frontend that knows about the proxy
 ```
 
-`node scripts/gen-icons.mjs` перегенерирует PNG-иконки из `public/favicon.svg`.
+`node scripts/gen-icons.mjs` regenerates the PNG icons from `public/favicon.svg`.
 
-## Как проверять работу
+## How to verify
 
-Автотестов нет. Проверка — ручная, через браузерную панель на мобильной ширине (375px),
-и это обязательная часть любой заметной правки. Что стоит прогонять:
+There are no automated tests. Verification is manual, through the browser panel at
+mobile width (375px), and it is a mandatory part of any noticeable change. Worth
+running:
 
-- поиск в трёх вкладках (ALL / SHOWS / MOVIES) на запросах `the matrix`, `spider-man`,
-  `star trek` — они ловили реальные баги источников;
-- чек-ин эпизода с карточки и на странице сериала, Undo;
-- Explore без запроса: секции For you, Coming to theaters, Airing tonight;
-- скрытая страница `/#/insights` (счётчики использования, ни с чем не связана в навигации);
-- обе темы и **горизонтальное переполнение** (`document.documentElement.scrollWidth`
-  против `clientWidth` — должно быть 0, уже ловило баг с CSS Grid);
-- консоль без ошибок.
+- search in all three tabs (ALL / SHOWS / MOVIES) for `the matrix`, `spider-man`,
+  `star trek` — these caught real bugs in the sources;
+- checking in an episode from a card and from the show page, plus Undo;
+- Explore with no query: the For you, Coming to theaters and Airing tonight
+  sections;
+- the hidden `/#/insights` page (usage counters, not linked from navigation);
+- both themes and **horizontal overflow**
+  (`document.documentElement.scrollWidth` against `clientWidth` — must be 0; this
+  already caught a CSS Grid bug);
+- a clean console.
 
-Полезно: iOS-симулятор (`xcrun simctl openurl <udid> <url>`) и Android-эмулятор
-(`adb shell am start -a android.intent.action.VIEW -d http://10.0.2.2:4173/`).
+Useful: the iOS simulator (`xcrun simctl openurl <udid> <url>`) and the Android
+emulator (`adb shell am start -a android.intent.action.VIEW -d http://10.0.2.2:4173/`).
 
-## Состояние (на 2026-07-26)
+## Status (as of 2026-07-26)
 
-Всё слито в `main`, ждущих ревью веток нет: `design-divergence` и `vercel-tmdb` влиты
-владельцем. Переезд на Vercel выполнен, `TMDB_API_KEY` задан. Ветки в репозитории ещё
-лежат, но отстают от `main` — работать от них нельзя.
+Everything is merged into `main` and no branches are awaiting review:
+`design-divergence` and `vercel-tmdb` were merged by the owner. The move to Vercel
+is done and `TMDB_API_KEY` is set. The branches still exist in the repository but
+lag behind `main` — do not work from them.
 
-Два живых адреса, **оба полноценные** — почему старый не выключен, в
-[docs/DEPLOY.md](docs/DEPLOY.md):
+Two live addresses, **both fully functional** — why the old one is not switched
+off is in [docs/DEPLOY.md](docs/DEPLOY.md):
 
-| Адрес | Роль |
+| Address | Role |
 |---|---|
-| <https://film-table.vercel.app> | основной, свой прокси `/api/tmdb` |
-| <https://mrwd.github.io/film-table/> | прежний; ходит за TMDB в прокси Vercel через `VITE_API_BASE`, поэтому не урезан |
+| <https://film-table.vercel.app> | primary, with its own `/api/tmdb` proxy |
+| <https://mrwd.github.io/film-table/> | the previous one; reaches TMDB through the Vercel proxy via `VITE_API_BASE`, so it is not cut down |
 
-Контакты внутри приложения (Профиль → Feedback & contact): `lvigtor@gmail.com` и
-<https://www.linkedin.com/in/viktor-lavrov>. Форма ничего не отправляет сама — собирает
-`mailto:` и отдаёт почтовому клиенту; бэкенда под неё нет и заводить его нельзя.
+Contacts inside the app (Profile → Feedback & contact): `lvigtor@gmail.com` and
+<https://www.linkedin.com/in/viktor-lavrov>. The form does not send anything by
+itself — it assembles a `mailto:` and hands it to the mail client; there is no
+backend for it and none may be added.
 
-## Открытые вопросы
+## Open questions
 
-- Ключ TMDB был однажды передан в переписке — владелец собирался его перевыпустить,
-  подтверждения не было.
-- Судьба донат-кнопки внутри приложения при сертификации TMDB «personal use / no revenue»
-  (см. DECISIONS).
-- Тексты постов в LinkedIn написаны (FilmTable и GamesTable), но не опубликованы.
-- В приложении стоит Vercel Web Analytics: без кук, только имя экрана. Это **отступление**
-  от исходного принципа «никакой аналитики» — формулируя что-то публично, не утверждать,
-  что аналитики нет вовсе.
-- `.chips-hint` и `.attribution` дают 3.99:1 в тёмной теме — ниже порога AA. Владельцу
-  сказано, правку он не заказывал.
+- The TMDB key was once shared in chat — the owner intended to reissue it, but
+  there was no confirmation.
+- The fate of the in-app donation button under TMDB's "personal use / no revenue"
+  certification (see DECISIONS).
+- LinkedIn post texts are written (FilmTable and GamesTable) but not published.
+- The app has Vercel Web Analytics: no cookies, screen name only. That is a
+  **departure** from the original "no analytics" principle — when stating anything
+  publicly, do not claim there is no analytics at all.
+- `.chips-hint` and `.attribution` give 3.99:1 in the dark theme — below the AA
+  threshold. The owner has been told; he did not order a fix.
 
-## Тон общения с владельцем
+## Tone with the owner
 
-Отвечать по-русски. Он ценит проверку фактов вместо предположений: перед утверждением о
-поведении API — сделать запрос и показать цифры. Он спрашивает про юридические риски —
-отвечать честно, с оговоркой, что это не юридическая консультация. Работу над крупными
-изменениями вести в отдельной ветке и давать ему проверить до заливки.
+Reply in Russian. He values verified facts over assumptions: before claiming
+anything about an API's behaviour, make the request and show the numbers. He asks
+about legal risks — answer honestly, with the caveat that this is not legal
+advice. Do large changes in a separate branch and let him review before merging.

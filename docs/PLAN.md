@@ -1,88 +1,103 @@
-# FilmTable — план и дизайн
+# FilmTable — plan and design
 
-Личный трекер сериалов и фильмов, замена закрытому TV Time. Без бэкенда: все данные
-пользователя живут на устройстве (localStorage) + экспорт/импорт JSON-бэкапа.
+A personal TV series and movie tracker, a replacement for the shut-down TV Time.
+No backend: all user data lives on the device (localStorage) + JSON backup
+export/import.
 
-## Платформы и стек
+## Platforms and stack
 
-Цель — Android, iPhone и web из одной кодовой базы, без сервера и без магазинов приложений.
+The goal is Android, iPhone and web from a single codebase, with no server and no
+app stores.
 
-**Выбор: мобильный-first PWA** (React 19 + Vite 7 + TypeScript).
+**The choice: a mobile-first PWA** (React 19 + Vite 7 + TypeScript).
 
-- Web — просто открывается по URL.
-- iPhone / Android — «Добавить на экран „Домой"»: полноэкранное приложение со своей
-  иконкой, работает офлайн (service worker), данные хранятся локально.
-- Никакой сборки под каждую платформу, бесплатный хостинг статики (Netlify/GitHub Pages).
-- Путь к сторам на будущее: тот же код оборачивается в Capacitor → нативные APK/IPA.
+- Web — just open the URL.
+- iPhone / Android — "Add to Home Screen": a full-screen app with its own icon,
+  working offline (service worker), with data stored locally.
+- No per-platform builds, and free static hosting (Netlify/GitHub Pages).
+- A route to the stores in future: the same code wrapped in Capacitor → native
+  APK/IPA.
 
-Библиотеки: `react-router-dom` (HashRouter — работает на любом статическом хостинге),
-`zustand` + persist (состояние + localStorage), `vite-plugin-pwa` (manifest + service worker).
-Всё остальное — рукописный CSS под дизайн TV Time.
+Libraries: `react-router-dom` (HashRouter — works on any static host), `zustand` +
+persist (state + localStorage), `vite-plugin-pwa` (manifest + service worker).
+Everything else is hand-written CSS matching the TV Time design.
 
-## API (бесплатные, без ключей)
+## APIs (free, no keys)
 
-| API | Что даёт | Лимиты | Почему |
+| API | What it provides | Limits | Why |
 |---|---|---|---|
-| **TVmaze** `api.tvmaze.com` | Поиск сериалов, детали, сезоны/эпизоды с датами и временем выхода, расписание эфира, картинки | без ключа, ~20 req/10s, CORS ✓ | Полные данные по эпизодам — сердце TV Time. Лицензия CC BY-SA (ставим attribution) |
-| **iTunes Search API** `itunes.apple.com` | Поиск фильмов: постер, жанр, хронометраж, дата релиза, описание | без ключа, ~20 req/min | Единственный приличный фильмовый API вообще без регистрации. Для web есть JSONP-fallback, если CORS не отдан |
+| **TVmaze** `api.tvmaze.com` | Show search, details, seasons/episodes with dates and air times, the airing schedule, images | no key, ~20 req/10s, CORS ✓ | Complete episode data — the heart of TV Time. Licensed CC BY-SA (we display attribution) |
+| **iTunes Search API** `itunes.apple.com` | Movie search: poster, genre, runtime, release date, description | no key, ~20 req/min | The only decent movie API with no registration at all. For the web there is a JSONP fallback if CORS is not sent |
 
-Сознательный трейдофф: TMDB даёт более богатые данные по фильмам, но требует API-ключ →
-приложение не работало бы «из коробки». Архитектура данных позволяет добавить TMDB позже.
+A deliberate trade-off: TMDB provides richer movie data but requires an API key →
+the app would not work out of the box. The data architecture allows TMDB to be
+added later.
 
-## Модель данных (localStorage)
+## Data model (localStorage)
 
 ```
-library (бэкапится):
+library (backed up):
   shows:  { [tvmazeId]: { status: following|stopped, watched: {epId: timestamp}, addedAt, lastWatchedAt } }
-  movies: { [itunesId]: { snapshot фильма..., status: watchlist|watched, watchedAt } }
-cache (не бэкапится, обновляется):
-  { [showId]: { show, episodes[], fetchedAt } }   // refresh раз в 12ч
+  movies: { [itunesId]: { movie snapshot..., status: watchlist|watched, watchedAt } }
+cache (not backed up, refreshed):
+  { [showId]: { show, episodes[], fetchedAt } }   // refresh every 12h
 ```
 
-Производные данные (не храним, считаем): следующий эпизод = первый вышедший непросмотренный;
-«+N» = сколько ещё вышло после него; up to date; upcoming; статистика времени.
+Derived data (not stored, computed): the next episode = the first aired unwatched
+one; "+N" = how many more have aired after it; up to date; upcoming; time
+statistics.
 
-## Экраны (структура = TV Time)
+## Screens (structure = TV Time)
 
-1. **Shows** — вкладки Watch List / Upcoming
-   - Watch List: секции WATCH NEXT, NOT STARTED YET, HAVEN'T WATCHED FOR A WHILE (>30 дней);
-     карточка: постер, чип шоу, `S03 | E01 +N`, название эпизода, бейджи (PREMIERE/NEW),
-     чек-кнопка = отметить эпизод (с Undo). Переключатель список/сетка.
-   - Upcoming: будущие эпизоды моих шоу, группы TODAY / день недели / LATER,
-     время+канал или «N DAYS», бейджи PREMIERE/NEW/AIRED/LATEST.
-2. **Movies** — Watch List (+ секция WATCHED) / Upcoming (невышедшие, отсчёт дней).
-3. **Explore** — поиск (сериалы/фильмы), без запроса — Discover: AIRING TONIGHT и
-   POPULAR THIS WEEK (агрегат расписания TVmaze за 7 дней, сортировка по weight).
-4. **Show page** — hero-постер, мета, прогресс x/y, «Check in: S03E01», сезоны-аккордеон
-   с чекбоксами эпизодов и отметкой сезона целиком, Stop/Resume/Remove.
-5. **Movie page** — постер, мета, watchlist/watched, описание.
-6. **Profile** — статистика (TV time, эпизоды, фильмы), полки по статусам,
+1. **Shows** — Watch List / Upcoming tabs
+   - Watch List: the WATCH NEXT, NOT STARTED YET and HAVEN'T WATCHED FOR A WHILE
+     (>30 days) sections; a card shows the poster, the show chip, `S03 | E01 +N`,
+     the episode title and badges (PREMIERE/NEW), with the check button marking the
+     episode (with Undo). A list/grid toggle.
+   - Upcoming: upcoming episodes of my shows, grouped TODAY / weekday / LATER, with
+     time+channel or "N DAYS", and PREMIERE/NEW/AIRED/LATEST badges.
+2. **Movies** — Watch List (+ a WATCHED section) / Upcoming (unreleased, counting
+   down the days).
+3. **Explore** — search (shows/movies); with no query, Discover: AIRING TONIGHT and
+   POPULAR THIS WEEK (an aggregate of the TVmaze schedule over 7 days, sorted by
+   weight).
+4. **Show page** — hero poster, metadata, x/y progress, "Check in: S03E01",
+   accordion seasons with episode checkboxes and whole-season marking,
+   Stop/Resume/Remove.
+5. **Movie page** — poster, metadata, watchlist/watched, description.
+6. **Profile** — statistics (TV time, episodes, movies), shelves by status,
    Export / Import / Reset, attribution.
 
-## Дизайн-токены (со скриншотов TV Time)
+## Design tokens (from TV Time screenshots)
 
-- Фон `#f2f2f2`, карточки белые r16 с мягкой тенью, текст `#111` / серые `#6f6f6f` `#9e9e9e`
-- Акценты: жёлтый `#ffd60a` (NEW, активные чипы), зелёный `#30c554` (AIRED), чёрные пилюли
-- Верхние вкладки: UPPERCASE, активная — чёрная с толстым подчёркиванием
-- Серые пилюли-заголовки секций (WATCH NEXT), чипы шоу с рамкой и шевроном
-- `S03 | E01` — крупная жирная типографика; чек — серый круг → чёрный при отметке
-- Нижняя навигация: Shows / Movies / Explore / Profile
-- Тёмная тема — автоматически по системной
+- Background `#f2f2f2`, white r16 cards with a soft shadow, text `#111` / greys
+  `#6f6f6f` `#9e9e9e`
+- Accents: yellow `#ffd60a` (NEW, active chips), green `#30c554` (AIRED), black
+  pills
+- Top tabs: UPPERCASE, the active one black with a thick underline
+- Grey pill section headings (WATCH NEXT), show chips with a border and a chevron
+- `S03 | E01` — large bold typography; the check is a grey circle → black when
+  marked
+- Bottom navigation: Shows / Movies / Explore / Profile
+- Dark theme — automatically from the system setting
 
-## Ручное тестирование перед сдачей
+## Manual testing before delivery
 
-1. Поиск «silo» → добавить → Not started S01E01
-2. Страница шоу: отметить сезоны 1–2 → прогресс, Watch Next показывает следующий эпизод
-3. Чек-ин с карточки → эпизод сдвигается, +N уменьшается, Undo возвращает
-4. Upcoming: группировка и отсчёт дней соответствуют датам из API
-5. Фильмы: поиск, watchlist, watched, невышедший фильм в Upcoming
-6. Profile: статистика сходится, Export → Reset → Import восстанавливает
-7. Перезагрузка страницы — всё на месте (persist)
-8. Build + preview: manifest, service worker, офлайн-перезагрузка
-9. iOS Simulator (Safari) и Android-эмулятор (Chrome): вёрстка, safe-area, установка PWA
-10. Консоль без ошибок на всех флоу
+1. Search "silo" → add → Not started S01E01
+2. Show page: mark seasons 1–2 → progress updates, Watch Next shows the next
+   episode
+3. Check in from a card → the episode advances, +N decreases, Undo reverts
+4. Upcoming: grouping and day countdowns match the dates from the API
+5. Movies: search, watchlist, watched, an unreleased film in Upcoming
+6. Profile: the statistics add up, Export → Reset → Import restores
+7. Reload the page — everything is still there (persist)
+8. Build + preview: manifest, service worker, offline reload
+9. iOS Simulator (Safari) and the Android emulator (Chrome): layout, safe area,
+   PWA installation
+10. A clean console across every flow
 
-## Roadmap (после v1)
+## Roadmap (after v1)
 
-Capacitor-обёртки для сторов • TMDB как опциональный провайдер фильмов • импорт CSV из
-TV Time takeout • уведомления о выходе эпизодов • синк между устройствами (файл в облаке).
+Capacitor wrappers for the stores • TMDB as an optional movie provider • CSV import
+from a TV Time takeout • episode release notifications • sync between devices (a
+file in the cloud).

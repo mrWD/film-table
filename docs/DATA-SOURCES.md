@@ -1,112 +1,121 @@
-# Источники данных
+# Data sources
 
-Все квирки ниже установлены замерами, а не догадками. Даты — когда проверяли. Если
-поведение API изменится, проверяйте заново и правьте этот файл.
+Every quirk below was established by measurement, not by guesswork. The dates are
+when it was checked. If an API's behaviour changes, check again and fix this file.
 
-## Сводка
+## Summary
 
-| Источник | Что даёт | Ключ | Роль |
+| Source | What it provides | Key | Role |
 |---|---|---|---|
-| **TVmaze** | сериалы: сезоны, эпизоды, время выхода, расписание | нет | единственный источник эпизодов |
-| **TMDB** | фильмы: каталог, постеры, кинорелизы | да, через прокси | ведущий по фильмам, если настроен |
-| **Cinemeta** | фильмы и сериалы: каталог с постерами и IMDb-id | нет | keyless-основа, фолбэк |
-| **iTunes** | фильмы | нет | добирает то, чего нет у остальных |
+| **TVmaze** | shows: seasons, episodes, air times, schedule | no | the only source of episodes |
+| **TMDB** | movies: catalogue, posters, theatrical releases | yes, via the proxy | the lead source for movies when configured |
+| **Cinemeta** | movies and shows: a catalogue with posters and IMDb ids | no | the key-free foundation, fallback |
+| **iTunes** | movies | no | fills in what the others do not have |
 
 ## TVmaze
 
-Лицензия **CC BY-SA**, условия прямо разрешают любое использование, включая коммерческое,
-при указании источника. Атрибуция стоит в Профиле, в Explore и на странице сериала.
-Лимит — около 20 запросов за 10 секунд с IP.
+Licensed **CC BY-SA**; the terms explicitly permit any use, including commercial
+use, with attribution. The attribution appears in the Profile, in Explore and on
+the show page. The rate limit is roughly 20 requests per 10 seconds per IP.
 
-**Квирк (проверено 2026-07-25):** `/search/shows` отдаёт **максимум 10 результатов** на
-любой запрос. Ни параметра страницы, ни лимита не предусмотрено. Проверено на `spider`,
-`star`, `the` — везде ровно 10. Поэтому выдача расширяется каталогом Cinemeta.
+**Quirk (verified 2026-07-25):** `/search/shows` returns **at most 10 results** for
+any query. There is no page parameter and no limit parameter. Verified on `spider`,
+`star`, `the` — exactly 10 every time. That is why the results are widened with the
+Cinemeta catalogue.
 
-**Мост между источниками:** `/lookup/shows?imdb=tt…` находит сериал по IMDb-id. Это
-позволяет взять сериал из Cinemeta и получить для него полноценную запись TVmaze с
-эпизодами. Отдаёт 404, если сериала у TVmaze нет — такие кандидаты просто отбрасываются.
+**The bridge between sources:** `/lookup/shows?imdb=tt…` finds a show by IMDb id.
+That makes it possible to take a show from Cinemeta and get a full TVmaze record
+with episodes for it. It returns 404 when TVmaze does not have the show — such
+candidates are simply discarded.
 
 ## TMDB
 
-Ключ выдан на условиях **personal use** (сертификация «non-commercial, generates no
-revenue»). Ключ живёт только в переменной окружения Vercel `TMDB_API_KEY`.
+The key was issued for **personal use** (certified "non-commercial, generates no
+revenue"). It lives only in the Vercel `TMDB_API_KEY` environment variable.
 
-Прокси принимает оба формата: короткий v3 API Key (уходит как query-параметр) и длинный
-v4 Read Access Token (уходит как `Authorization: Bearer`). Определяется по префиксу `eyJ`.
+The proxy accepts both formats: the short v3 API Key (sent as a query parameter)
+and the long v4 Read Access Token (sent as `Authorization: Bearer`). It is detected
+by the `eyJ` prefix.
 
-Обязательная атрибуция стоит в Профиле: «This product uses the TMDB API but is not
-endorsed or certified by TMDB».
+The mandatory attribution is in the Profile: "This product uses the TMDB API but is
+not endorsed or certified by TMDB".
 
-Что TMDB закрывает (проверено 2026-07-26 на живом ключе):
+What TMDB covers (verified 2026-07-26 against a live key):
 
-- `search/movie` — полный каталог: `the matrix` → 56 результатов с «The Matrix» первым,
-  `spider-man` → 75. Ровно то, чего не могли дать другие источники.
-- `movie/upcoming?region=US` — кинотеатральные анонсы с датами. **Ни один keyless-источник
-  их не знает**; ради этого сделана секция «Coming to theaters».
-- `image.tmdb.org` — постеры, использование которых прямо разрешено условиями TMDB.
+- `search/movie` — the full catalogue: `the matrix` → 56 results with "The Matrix"
+  first, `spider-man` → 75. Exactly what the other sources could not provide.
+- `movie/upcoming?region=US` — theatrical announcements with dates. **No key-free
+  source knows them**; the "Coming to theaters" section exists because of this.
+- `image.tmdb.org` — posters, whose use is explicitly permitted by TMDB's terms.
 
 ## Cinemeta
 
-`https://v3-cinemeta.strem.io` — публичный каталог метаданных Stremio. CORS открыт (`*`),
-ключа не требует.
+`https://v3-cinemeta.strem.io` — Stremio's public metadata catalogue. CORS is open
+(`*`) and no key is required.
 
-**Это не документированное публичное API с условиями использования.** Юридического риска
-для нас тут нет (нечего нарушать), но есть операционный: доступ могут закрыть в любой
-момент без предупреждения. Поэтому Cinemeta никогда не должен быть единственным путём —
-при его отказе поиск фильмов обязан деградировать на iTunes, а поиск сериалов на TVmaze.
+**This is not a documented public API with terms of use.** There is no legal risk
+for us here (there is nothing to violate), but there is an operational one: access
+could be closed off at any moment without warning. So Cinemeta must never be the
+only path — if it fails, movie search must degrade to iTunes and show search to
+TVmaze.
 
-Полезные эндпоинты:
+Useful endpoints:
 
-- `/catalog/movie|series/top/search=QUERY.json` — поиск
-- `/catalog/{type}/{top|imdbRating|year}/genre=GENRE.json` — каталог с фильтром и
-  пагинацией через `skip`; на этом построены рекомендации
-- `/meta/{type}/tt….json` — карточка с жанрами, рейтингом, длительностью, описанием
+- `/catalog/movie|series/top/search=QUERY.json` — search
+- `/catalog/{type}/{top|imdbRating|year}/genre=GENRE.json` — a catalogue with a
+  filter and `skip`-based pagination; the recommendations are built on this
+- `/meta/{type}/tt….json` — the record with genres, rating, runtime and description
 
-Список результатов лёгкий: только название, постер, год. Длительность и описание приходят
-отдельным запросом карточки — поэтому фильм дообогащается при добавлении в библиотеку.
+The result list is lightweight: title, poster and year only. Runtime and description
+arrive in a separate detail request — which is why a film is enriched when it is
+added to the library.
 
-Постеры Cinemeta ведут на `m.media-amazon.com` и `images.metahub.space` — это хотлинк
-чужих изображений. Терпимо для фан-проекта, но именно это самое слабое место с точки
-зрения прав; при переходе на TMDB картинки становятся легальными.
+Cinemeta posters point at `m.media-amazon.com` and `images.metahub.space` — that is
+hotlinking somebody else's images. Tolerable for a fan project, but it is precisely
+the weakest point from a rights perspective; moving to TMDB makes the images
+legitimate.
 
 ## iTunes Search API
 
-**Квирк (проверено 2026-07-25, критичный):** фильтры `media=movie` и `entity=movie`
-возвращают **ноль результатов на любой запрос** — проверено на `dune`, `inception`,
-`titanic`, `spider-man`. Из-за этого приходится искать без фильтра и отбирать
-`kind === 'feature-movie'` самим.
+**Quirk (verified 2026-07-25, critical):** the `media=movie` and `entity=movie`
+filters return **zero results for any query** — verified on `dune`, `inception`,
+`titanic`, `spider-man`. Because of that we have to search without a filter and
+select `kind === 'feature-movie'` ourselves.
 
-Но без фильтра выдача забита подкастами, аудиокнигами и ТВ-эпизодами: по `spider-man` в
-200 результатах оказалось **4 фильма**, причём не те (не было ни одной из основных частей),
-а `the matrix` не находился **вообще**. Поэтому iTunes низведён до роли «добери то, чего
-нет у других».
+But without the filter the results are packed with podcasts, audiobooks and TV
+episodes: for `spider-man`, 200 results contained **4 films**, and the wrong ones at
+that (none of the main instalments), while `the matrix` was not found **at all**.
+So iTunes is demoted to the role of "fill in what the others lack".
 
-Ещё: iTunes знает только фильмы, доступные в цифровом магазине — кинотеатральных анонсов
-там нет в принципе.
+Also: iTunes only knows films available in the digital store — theatrical
+announcements are not there in principle.
 
-CORS иногда отсутствует, поэтому в `api.ts` есть JSONP-фолбэк.
+CORS is sometimes missing, so `api.ts` has a JSONP fallback.
 
-## Wikidata — проверено и отвергнуто
+## Wikidata — tested and rejected
 
-Рассматривалась как keyless-источник фильмов. Не годится: `wbsearchentities` по
-`spider-man` возвращает видеоигры, персонажей комиксов и пинбол-автомат вместо фильмов, а
-постеров там почти нет — они несвободны. Повторно не рассматривать.
+Considered as a key-free movie source. Not suitable: `wbsearchentities` for
+`spider-man` returns video games, comic book characters and a pinball machine
+instead of films, and there are almost no posters — they are not free. Do not
+reconsider.
 
-## Порядок слияния
+## Merge order
 
-**Фильмы** (`searchMovies` в `api.ts`): TMDB → если пусто или прокси нет, параллельно
-Cinemeta и iTunes, где Cinemeta ведёт, а iTunes добавляет только отсутствующее (сверка по
-нормализованному названию + году).
+**Movies** (`searchMovies` in `api.ts`): TMDB → if empty or the proxy is absent,
+Cinemeta and iTunes in parallel, with Cinemeta leading and iTunes adding only what
+is missing (matched by normalised title + year).
 
-**Сериалы** (`searchShows`): TVmaze (до 10) + Cinemeta; кандидаты из Cinemeta, которых нет
-в выдаче TVmaze, резолвятся по IMDb-id, не более 8 штук, с конкуррентностью 4.
+**Shows** (`searchShows`): TVmaze (up to 10) + Cinemeta; Cinemeta candidates absent
+from the TVmaze results are resolved by IMDb id, at most 8 of them, with a
+concurrency of 4.
 
-Все дополняющие запросы обёрнуты в `withTimeout` — медленный второстепенный источник
-никогда не задерживает основную выдачу.
+All supplementary requests are wrapped in `withTimeout` — a slow secondary source
+never holds up the main results.
 
-## Словари жанров
+## Genre vocabularies
 
-У трёх источников они разные: TVmaze говорит `Science-Fiction`, Cinemeta `Sci-Fi`, iTunes
-`Sci-Fi & Fantasy`. Без сведения к общему словарю сопоставление вкуса не работает. Всё
-приводится к словарю Cinemeta в `src/lib/genres.ts` (он же принимается их каталогом как
-фильтр). Незнакомые жанры отбрасываются, а не угадываются.
+The three sources differ: TVmaze says `Science-Fiction`, Cinemeta `Sci-Fi`, iTunes
+`Sci-Fi & Fantasy`. Without reconciling them into a common vocabulary, taste
+matching does not work. Everything is mapped to Cinemeta's vocabulary in
+`src/lib/genres.ts` (which their catalogue also accepts as a filter). Unknown genres
+are discarded rather than guessed.

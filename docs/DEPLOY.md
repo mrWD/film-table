@@ -1,65 +1,70 @@
-# Деплой
+# Deployment
 
-Приложение живёт на **двух** адресах сразу, и это не дубль, а следствие переезда.
+The app lives at **two** addresses at once, and that is not a duplicate but a
+consequence of the move.
 
-| Адрес | Что это | TMDB |
+| Address | What it is | TMDB |
 |---|---|---|
-| <https://film-table.vercel.app> | основной, статика + функция `/api/tmdb` | да, свой прокси |
-| <https://mrwd.github.io/film-table/> | прежний, остаётся ради уже собранных библиотек | да, через прокси Vercel |
+| <https://film-table.vercel.app> | the primary one, static files + the `/api/tmdb` function | yes, its own proxy |
+| <https://mrwd.github.io/film-table/> | the previous one, kept for libraries already built there | yes, through the Vercel proxy |
 
-## Vercel — основной
+## Vercel — the primary one
 
-Пуш в `main` — Vercel собирает и выкладывает сам.
+On a push to `main`, Vercel builds and publishes on its own.
 
-Одна переменная окружения: `TMDB_API_KEY` в **Settings → Environment Variables** (подходит
-и короткий API Key, и длинный Read Access Token). Больше ключ нигде не нужен. Без него
-прокси отдаёт 503, а клиент молча уходит на Cinemeta и iTunes — приложение работает, но
-качество поиска фильмов падает.
+One environment variable: `TMDB_API_KEY` in **Settings → Environment Variables**
+(both the short API Key and the long Read Access Token work). The key is not needed
+anywhere else. Without it the proxy returns 503 and the client silently falls back
+to Cinemeta and iTunes — the app works, but movie search quality drops.
 
 ```bash
 curl -s "https://film-table.vercel.app/api/tmdb?path=search/movie&query=the+matrix" | head -c 200
 ```
 
-## GitHub Pages — прежний адрес
+## GitHub Pages — the previous address
 
-`.github/workflows/deploy.yml` на пуш в `main` собирает и публикует. Подпуть подставляется
-переменной `BASE_PATH=/film-table/`.
+`.github/workflows/deploy.yml` builds and publishes on a push to `main`. The
+subpath is injected by the `BASE_PATH=/film-table/` variable.
 
-**Важно и неочевидно:** этой сборке передаётся `VITE_API_BASE=https://film-table.vercel.app`,
-поэтому старый адрес ходит за TMDB в прокси на Vercel через CORS. То есть Pages —
-полноценная версия, а не урезанная. Проверяется по бандлу:
+**Important and non-obvious:** that build is given
+`VITE_API_BASE=https://film-table.vercel.app`, so the old address reaches TMDB
+through the Vercel proxy via CORS. In other words, Pages is a full version, not a
+cut-down one. It can be verified from the bundle:
 
 ```bash
 BUNDLE=$(curl -s https://mrwd.github.io/film-table/ | grep -o '/film-table/assets/index-[A-Za-z0-9_-]*\.js' | head -1)
 curl -s "https://mrwd.github.io$BUNDLE" | grep -o 'https://film-table.vercel.app'
 ```
 
-Собственного `/api/tmdb` у Pages нет и быть не может — статический хостинг не исполняет
-серверный код. Прямой запрос туда вернёт 404, и это нормально.
+Pages has no `/api/tmdb` of its own and cannot have one — static hosting does not
+execute server code. A direct request there returns 404, and that is expected.
 
-### Почему старый адрес не выключен
+### Why the old address is not switched off
 
-`localStorage` привязан к домену и на новый домен **не переезжает**. Библиотека, собранная
-на `mrwd.github.io`, там и осталась. Поэтому на старом адресе висит `MigrationBanner`
-(`src/components/MigrationBanner.tsx`): показывается только при `hostname === OLD_HOST`,
-объясняет ситуацию и отправляет в Профиль → Export, а на новом адресе нужен Import.
+`localStorage` is tied to a domain and **does not move** to a new one. A library
+built on `mrwd.github.io` stayed there. That is why the old address carries a
+`MigrationBanner` (`src/components/MigrationBanner.tsx`): it is shown only when
+`hostname === OLD_HOST`, explains the situation and sends the user to Profile →
+Export, with an Import needed at the new address.
 
-Выключать Pages нельзя, пока есть шанс, что там лежит чья-то библиотека без бэкапа.
-Если адрес всё же меняется — править `NEW_HOME` в баннере и `VITE_API_BASE` в workflow.
+Pages must not be switched off while there is any chance somebody's library sits
+there without a backup. If the address does change, update `NEW_HOME` in the banner
+and `VITE_API_BASE` in the workflow.
 
-## Проверить, что задеплоена текущая версия
+## Checking that the current version is deployed
 
-Хеш бандла на проде должен совпадать с локальным:
+The bundle hash in production must match the local one:
 
 ```bash
 curl -s https://film-table.vercel.app/ | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'
 grep -o 'assets/index-[A-Za-z0-9_-]*\.js' dist/index.html
 ```
 
-**Не опрашивать прод в цикле.** Частые запросы включают Vercel Security Checkpoint, и прод
-начинает отдавать 403 на всё подряд — выглядит как поломка приложения, но проходит само.
+**Do not poll production in a loop.** Frequent requests trip the Vercel Security
+Checkpoint and production starts returning 403 to everything — it looks like the
+app is broken, but it clears up on its own.
 
-Service worker отдаёт прошлую сборку, поэтому перед проверкой в браузере:
+The service worker serves the previous build, so before checking in a browser:
 
 ```js
 for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister()
@@ -67,38 +72,40 @@ for (const k of await caches.keys()) await caches.delete(k)
 location.reload()
 ```
 
-Переход по адресу, который отличается **только хэшем**, страницу не перезагружает:
-приложение остаётся с прежним состоянием в памяти, и подложенные в `localStorage` данные
-не подхватываются. Нужен явный `location.reload()`.
+Navigating to an address that differs **only in the hash** does not reload the
+page: the app keeps its previous in-memory state and data planted in
+`localStorage` is not picked up. An explicit `location.reload()` is required.
 
-## Локальная проверка прокси без деплоя
+## Testing the proxy locally without deploying
 
 ```bash
-echo 'TMDB_API_KEY=<ключ>' > .env.local             # файл в .gitignore
-node --env-file=.env.local scripts/dev-api.mjs      # прокси на :3001
-VITE_API_BASE=http://localhost:3001 npx vite        # фронт
+echo 'TMDB_API_KEY=<key>' > .env.local                # the file is in .gitignore
+node --env-file=.env.local scripts/dev-api.mjs       # proxy on :3001
+VITE_API_BASE=http://localhost:3001 npx vite         # frontend
 ```
 
-Что стоит проверить (всё это уже ловило реальные дефекты):
+Worth checking (all of this has already caught real defects):
 
 ```bash
-curl -s "localhost:3001/api/tmdb?path=search/movie&query=the+matrix"       # 200, есть The Matrix
+curl -s "localhost:3001/api/tmdb?path=search/movie&query=the+matrix"       # 200, contains The Matrix
 curl -s -o /dev/null -w "%{http_code}\n" "localhost:3001/api/tmdb?path=account/lists"  # 403
 curl -s -o /dev/null -w "%{http_code}\n" -H "Origin: https://evil.example" \
      "localhost:3001/api/tmdb?path=search/movie&query=x"                   # 403
-curl -s "localhost:3001/api/tmdb?path=movie/603" | grep -c "eyJhbGci"      # 0 — ключ не течёт
+curl -s "localhost:3001/api/tmdb?path=movie/603" | grep -c "eyJhbGci"      # 0 — the key does not leak
 ```
 
-## Альтернативные хостинги
+## Alternative hosts
 
-Проект — статика плюс одна функция, поэтому переносится и на Netlify, и на Cloudflare
-Pages. Ключевое требование: функция должна отвечать по пути `/api/tmdb`, иначе клиент
-её не найдёт и молча уйдёт на keyless-источники.
+The project is static files plus a single function, so it ports to Netlify and
+Cloudflare Pages as well. The key requirement: the function must answer at the
+`/api/tmdb` path, otherwise the client will not find it and will silently fall back
+to the key-free sources.
 
-## Правила безопасности
+## Security rules
 
-Ключ TMDB не должен попадать: в репозиторий, в клиентский бандл, в переписку. Только
-переменные окружения хостинга и локальный `.env.local`, который в `.gitignore`.
+The TMDB key must not end up in the repository, in the client bundle or in chat.
+Only the host's environment variables and a local `.env.local`, which is in
+`.gitignore`.
 
-Если ключ засветился — перевыпустить в настройках TMDB и обновить переменную в Vercel.
-Старый после перевыпуска перестаёт работать.
+If the key is ever exposed, reissue it in the TMDB settings and update the variable
+in Vercel. The old one stops working after reissue.

@@ -1,44 +1,45 @@
-# Архитектура
+# Architecture
 
-## Стек
+## Stack
 
-React 19 + TypeScript + Vite. Состояние — zustand (с `persist` там, где нужно пережить
-перезагрузку). Роутинг — `HashRouter`: хэш работает на любом статическом хостинге без
-серверных правил, включая GitHub Pages. Стили — рукописный CSS с токенами, без фреймворка.
-PWA — `vite-plugin-pwa` (manifest + service worker). Автотестов нет.
+React 19 + TypeScript + Vite. State is zustand (with `persist` wherever it needs
+to survive a reload). Routing is `HashRouter`: a hash works on any static host
+with no server-side rules, GitHub Pages included. Styling is hand-written CSS with
+tokens, no framework. PWA via `vite-plugin-pwa` (manifest + service worker). There
+are no automated tests.
 
-## Карта кода
+## Code map
 
 ```
-api/tmdb.js             serverless-прокси к TMDB (только на Vercel)
-scripts/dev-api.mjs     тот же прокси локально, для проверки без деплоя
-scripts/gen-icons.mjs   PNG-иконки из favicon.svg
+api/tmdb.js             serverless proxy to TMDB (Vercel only)
+scripts/dev-api.mjs     the same proxy locally, for testing without deploying
+scripts/gen-icons.mjs   PNG icons from favicon.svg
 
 src/lib/
-  types.ts        доменные типы (ShowSummary, Episode, Movie, TrackedShow, BackupFile)
-  api.ts          TVmaze + Cinemeta + iTunes; здесь же слияние источников
-  tmdb.ts         клиент нашего прокси; сам себя отключает, если прокси нет
-  genres.ts       сведение жанровых словарей трёх источников к одному
-  format.ts       форматирование дат, длительностей, кода эпизода
+  types.ts        domain types (ShowSummary, Episode, Movie, TrackedShow, BackupFile)
+  api.ts          TVmaze + Cinemeta + iTunes; source merging lives here too
+  tmdb.ts         a client for our proxy; disables itself if the proxy is absent
+  genres.ts       reconciles the genre vocabularies of the three sources into one
+  format.ts       formatting of dates, runtimes and episode codes
 
 src/store/
-  library.ts      ЕДИНСТВЕННЫЙ источник правды о пользователе (persist)
-  cache.ts        кэш шоу и эпизодов из TVmaze, TTL 12ч (persist)
-  theme.ts        выбор темы (persist)
-  explore.ts      состояние поиска и подборок (в памяти)
-  recommend.ts    профиль вкуса, кандидаты, скоринг рекомендаций (в памяти)
-  stats.ts        счётчики использования для скрытой страницы /insights (persist)
-  selectors.ts    ВСЯ производная логика — чистые функции, без состояния
+  library.ts      THE single source of truth about the user (persist)
+  cache.ts        cache of shows and episodes from TVmaze, 12h TTL (persist)
+  theme.ts        theme selection (persist)
+  explore.ts      search and curated list state (in memory)
+  recommend.ts    taste profile, candidates, recommendation scoring (in memory)
+  stats.ts        usage counters for the hidden /insights page (persist)
+  selectors.ts    ALL derived logic — pure functions, no state
 
-src/components/   Icons, ui (примитивы), cards (строки списков), Support, MigrationBanner
+src/components/   Icons, ui (primitives), cards (list rows), Support, MigrationBanner
 src/pages/        Shows, Movies, Explore, ShowDetail, MovieDetail, Profile, Insights
 ```
 
-## Модель данных
+## Data model
 
-В `localStorage` два независимых ключа.
+There are two independent keys in `localStorage`.
 
-**`filmtable-library-v1`** — то, что принадлежит пользователю и попадает в бэкап:
+**`filmtable-library-v1`** — what belongs to the user and goes into the backup:
 
 ```ts
 shows:  { [tvmazeId]: { id, addedAt, status: 'following'|'stopped',
@@ -47,180 +48,202 @@ movies: { [movieId]: { id, title, poster, genre, runtimeMin, releaseDate,
                        description, addedAt, status: 'watchlist'|'watched', watchedAt } }
 ```
 
-**`filmtable-cache-v1`** — кэш TVmaze, в бэкап не входит и восстанавливается сам:
+**`filmtable-cache-v1`** — the TVmaze cache; it is not part of the backup and
+rebuilds itself:
 
 ```ts
 entries: { [tvmazeId]: { fetchedAt, show: ShowSummary, episodes: Episode[] } }
 ```
 
-Ключевое: **прогресс хранится как множество id просмотренных эпизодов**, а не как «текущая
-серия». Поэтому переход эпизодов между сезонами, вставки спецсерий и просмотр вразнобой не
-ломают состояние. Всё остальное — производное и считается на лету в `selectors.ts`.
+The key point: **progress is stored as a set of watched episode ids**, not as "the
+current episode". That way episodes moving between seasons, inserted specials and
+out-of-order viewing do not break the state. Everything else is derived and
+computed on the fly in `selectors.ts`.
 
-Идентификаторы фильмов из разных источников различаются по префиксу: `tmdb:603` — TMDB,
-`tt0133093` — Cinemeta/IMDb, голое число — старый iTunes. `lookupMovie()` выбирает
-источник по префиксу, поэтому записи, добавленные раньше, продолжают работать.
+Movie identifiers from different sources are distinguished by prefix: `tmdb:603`
+is TMDB, `tt0133093` is Cinemeta/IMDb, and a bare number is the old iTunes.
+`lookupMovie()` picks the source from the prefix, so records added earlier keep
+working.
 
-## Как считается прогресс
+## How progress is computed
 
-`buildWatchItem()` в `selectors.ts`:
+`buildWatchItem()` in `selectors.ts`:
 
-1. вышедшие эпизоды = те, у кого `airstamp` в прошлом;
-2. следующий = первый вышедший непросмотренный;
-3. `+N` = сколько ещё вышедших непросмотренных после него;
-4. секция определяется так: ничего не просмотрено → NOT STARTED; последний просмотр
-   больше 30 дней назад → BEEN A WHILE; непросмотренных нет → CAUGHT UP; иначе UP NEXT.
+1. aired episodes = those whose `airstamp` is in the past;
+2. next = the first aired unwatched one;
+3. `+N` = how many more aired unwatched episodes follow it;
+4. the section is chosen like this: nothing watched → NOT STARTED; last watch more
+   than 30 days ago → BEEN A WHILE; nothing unwatched left → CAUGHT UP; otherwise
+   UP NEXT.
 
-## Рекомендации
+## Recommendations
 
-Content-based, целиком на клиенте (`store/recommend.ts`):
+Content-based, entirely on the client (`store/recommend.ts`):
 
-1. **Профиль вкуса** — вектор жанров из библиотеки. Вес сериала = `1 + log2(1 + число
-   просмотренных эпизодов)`, ×1.5 если смотрели за последние 30 дней. Просмотренный фильм
-   = 1.5, в списке к просмотру = 0.5. **Брошенный сериал даёт отрицательный вес** — иначе
-   система навязывает то, что уже отвергли. Вес делится на число жанров, чтобы тайтл с
-   пятью жанрами не перевесил сфокусированный.
-2. **Кандидаты** — жанровые каталоги Cinemeta (`/catalog/{type}/imdbRating/genre=X.json`)
-   по 3–4 ведущим жанрам профиля.
-3. **Скоринг** — `0.6 × косинус(жанры) + 0.25 × рейтинг + 0.15 × близость по годам`.
-   Всё, что уже в библиотеке, исключается по IMDb-id и по нормализованному названию.
-4. **Сериалы-кандидаты резолвятся обратно в TVmaze** по IMDb-id, иначе их нельзя
-   отслеживать по эпизодам.
-5. **Объяснение** («Because you watch X and Y») считается для каждой карточки отдельно —
-   по максимальному пересечению жанров с конкретным тайтлом библиотеки. Брать глобально
-   самые «тяжёлые» тайтлы нельзя: под всеми карточками появляется одна и та же фраза, и
-   это выглядит как заглушка (уже проходили).
+1. **The taste profile** — a genre vector built from the library. A show's weight
+   is `1 + log2(1 + number of watched episodes)`, ×1.5 if watched in the last 30
+   days. A watched film is 1.5, one on the watch list is 0.5. **A dropped show
+   contributes a negative weight** — otherwise the system pushes what has already
+   been rejected. The weight is divided by the number of genres so that a title
+   with five genres does not outweigh a focused one.
+2. **Candidates** — Cinemeta genre catalogues
+   (`/catalog/{type}/imdbRating/genre=X.json`) for the profile's 3–4 leading
+   genres.
+3. **Scoring** — `0.6 × cosine(genres) + 0.25 × rating + 0.15 × year proximity`.
+   Anything already in the library is excluded by IMDb id and by normalised title.
+4. **Candidate shows are resolved back to TVmaze** by IMDb id, otherwise they
+   cannot be tracked episode by episode.
+5. **The explanation** ("Because you watch X and Y") is computed for each card
+   separately, from the maximum genre overlap with a specific library title. Taking
+   the globally "heaviest" titles is not acceptable: the same phrase then appears
+   under every card and reads as a placeholder (we have been there).
 
-Коллаборативной фильтрации («те, кто смотрел X…») нет — она требует данных других
-пользователей, то есть бэкенда.
+There is no collaborative filtering ("people who watched X…") — that requires
+other users' data, which means a backend.
 
-## Фидбэк без бэкенда
+## Feedback without a backend
 
-Форма на Profile ничего не отправляет сама: она собирает `mailto:` и передаёт его почтовому
-клиенту устройства. Ничего не уходит, пока человек не нажмёт отправку у себя, и введённый
-текст нигде не сохраняется — принцип «нет бэкенда для пользовательских данных» остаётся в
-силе. Рядом открытым текстом почта и ссылка на LinkedIn: на устройстве без настроенной
-почты `mailto:` не делает ничего.
+The form on Profile does not send anything by itself: it assembles a `mailto:` and
+hands it to the device's mail client. Nothing goes out until the person hits send
+in their own client, and the text they typed is not stored anywhere — the "no
+backend for user data" principle still holds. Next to it, in plain text, are the
+email address and a LinkedIn link: on a device with no mail account configured,
+`mailto:` does nothing.
 
-## Где посмотреть
+## Where to watch
 
-Доступность на стримингах — из ленты JustWatch через TMDB. Это **не** то же, что канал в
-подзаголовке: канал говорит, кто снял и где вышло, а не где это можно посмотреть сегодня.
+Streaming availability comes from the JustWatch feed via TMDB. That is **not** the
+same as the network in the subtitle: the network says who made it and where it
+aired, not where it can be watched today.
 
-Лицензии страновые, поэтому страна берётся из настройки в профиле, а по умолчанию — из
-локали браузера (`navigator.languages`), а не из геолокации: локаль и так есть в каждом
-запросе, а координаты спрашивать не за чем.
+Licences are per-country, so the country comes from a profile setting and defaults
+to the browser locale (`navigator.languages`) rather than geolocation: the locale
+is already present in every request, and there is no reason to ask for
+coordinates.
 
-Сериалы в библиотеке лежат по id TVmaze, а провайдеры живут в TMDB, поэтому нужен мост
-`TVmaze → IMDb → TMDB`: `externals.imdb` у TVmaze уже забирается при разборе, дальше
-`find/{imdb_id}`. В выборке из десяти сериалов imdb-id был у всех десяти.
+Shows in the library are keyed by TVmaze id while providers live in TMDB, so a
+`TVmaze → IMDb → TMDB` bridge is needed: TVmaze's `externals.imdb` is already
+picked up during parsing, then `find/{imdb_id}`. In a sample of ten shows, all ten
+had an IMDb id.
 
-**Атрибуция JustWatch обязательна** по условиям TMDB и выводится рядом с результатами —
-это не украшение, убирать нельзя.
+**JustWatch attribution is mandatory** under TMDB's terms and is rendered next to
+the results — it is not decoration and must not be removed.
 
-Пути `watch/providers` и `find/tt…` добавлены в белый список прокси отдельно; кэш на
-провайдеров короче (6 часов), потому что сделки по лицензиям меняются днями, а не
-месяцами.
+The `watch/providers` and `find/tt…` paths were added to the proxy allowlist
+separately; the provider cache is shorter (6 hours) because licensing deals change
+over days, not months.
 
-## Годовой отчёт
+## The year in review
 
-Считается целиком из библиотеки: каждая отметка о просмотре и так хранит время, когда
-она поставлена, поэтому ни журнала, ни сервера не нужно — числа всегда были, их просто
-никто не складывал. Серии без кэша метаданных всё равно считаются: факт просмотра
-известен, даже когда неизвестен хронометраж, и выкидывать их значило бы занижать год.
+It is computed entirely from the library: every watch mark already stores the time
+it was set, so no log and no server are needed — the numbers were always there,
+nobody had just added them up. Episodes with no cached metadata still count: the
+fact that they were watched is known even when the runtime is not, and dropping
+them would understate the year.
 
-## Хранилище: сколько влезает и что с этим не так
+## Storage: how much fits and what is wrong with it
 
-Замеры в Chromium (июль 2026): у localStorage потолок **4.94 МБ** на origin, даже когда
-`navigator.storage.estimate()` рапортует про 10 ГБ — у него своя квота.
+Measurements in Chromium (July 2026): localStorage caps out at **4.94 MB** per
+origin, even when `navigator.storage.estimate()` reports 10 GB — it has its own
+quota.
 
-Сериалы хранятся по id, а не снимком, поэтому тяжёлая часть — только карта просмотренных
-серий: **24 Б на серию**. «Симпсоны» целиком, все 802 серии — 19 КБ; 300 сериалов по 60
-серий — 422 КБ, 8% лимита. Фильм — **192 Б** снимком; описание добавляло к нему ещё
-столько же и больше.
+Shows are stored by id rather than as a snapshot, so the heavy part is only the map
+of watched episodes: **24 B per episode**. All 802 episodes of The Simpsons come to
+19 KB; 300 shows at 60 episodes each is 422 KB, 8% of the limit. A film is **192 B**
+as a snapshot; the description added that much again and more.
 
-Три вещи, которые из этого следуют и уже сделаны:
+Three things follow from this, and all three are already done:
 
-- **`description` не пишется в хранилище.** Оно перезапрашивается при каждом открытии
-  детальной страницы и в списках не показывается никогда, но втрое раздувало запись.
-  Отсекается через `partialize`, в памяти на время сессии остаётся. У записей,
-  добавленных раньше, описание исчезнет при первой же записи в библиотеку — `partialize`
-  применяется ко всему стору целиком.
-- **`QuotaExceededError` перехватывается.** Без этого исключение вылетало посреди
-  обновления, изменение молча терялось, и человек узнавал об этом сильно позже.
-- **Приложение предлагает установить себя на домашний экран.** Это не реклама: Safari
-  чистит скриптовое хранилище у сайтов, куда давно не заходили, а на установленные
-  приложения правило не распространяется. В этом и текст подсказки.
+- **`description` is not written to storage.** It is re-fetched every time the
+  detail page opens and is never shown in lists, yet it tripled the size of a
+  record. It is stripped via `partialize` and kept in memory for the session. For
+  records added earlier, the description disappears on the very first write to the
+  library — `partialize` applies to the whole store at once.
+- **`QuotaExceededError` is caught.** Without that, the exception was thrown in the
+  middle of an update, the change was silently lost, and the person found out much
+  later.
+- **The app offers to install itself to the home screen.** This is not marketing:
+  Safari clears script storage for sites that have not been visited in a while, and
+  the rule does not apply to installed apps. That is what the prompt's text says.
 
-Цена записи не проблема: zustand сериализует весь стор на каждое изменение, но на 2000
-игр (2.5 МБ) это 4.5 мс на сериализацию и 1.8 мс на запись — незаметно.
+The cost of writing is not a problem: zustand serialises the whole store on every
+change, but at 2,000 records (2.5 MB) that is 4.5 ms to serialise and 1.8 ms to
+write — imperceptible.
 
-Настоящий риск — не объём, а потеря: хранилище чистится вместе с данными браузера. Поэтому
-Export/Import не украшение, а страховка, и профиль напоминает о бэкапе, когда записей
-набралось достаточно, чтобы их было жалко.
+The real risk is not size but loss: storage is wiped along with browser data. That
+is why Export/Import is insurance rather than decoration, and the profile reminds
+you to back up once there are enough records to miss.
 
-## Скрытая страница /insights
+## The hidden /insights page
 
-Не связана ни с одним пунктом навигации, открывается только по адресу `/#/insights`.
-Показывает счётчики использования этого устройства: сессии, активные дни, открытые экраны,
-какой источник ответил и сколько раз падал, чек-ины, плюс техническую панель (режим
-установки, состояние service worker, занятое хранилище, штамп сборки).
+It is not linked from any navigation item and opens only at `/#/insights`. It shows
+this device's usage counters: sessions, active days, screens opened, which source
+answered and how many times it failed, check-ins, plus a technical panel (install
+mode, service worker state, storage used, build stamp).
 
-Счётчики живут в `filmtable-stats-v1` и **не входят в бэкап библиотеки**. Хранятся только
-числа: ни поисковых запросов, ни названий, ни идентификаторов — ничего, что описывает
-человека. Наружу не уходит ничего.
+The counters live in `filmtable-stats-v1` and are **not part of the library
+backup**. Only numbers are stored: no search queries, no titles, no identifiers —
+nothing that describes a person. Nothing leaves the device.
 
-Важно: побочные вызовы счётчиков должны быть **вне** редьюсеров zustand. Внутри `set()`
-они выполняются дважды под StrictMode и удваивают цифры.
+Important: counter side effects must sit **outside** zustand reducers. Inside
+`set()` they run twice under StrictMode and double the numbers.
 
-Это статистика одного устройства. Посещаемость сайта всеми людьми так посчитать нельзя —
-для этого нужна агрегация на сервере (см. DECISIONS).
+This is single-device statistics. Site-wide traffic across all people cannot be
+counted this way — that needs server-side aggregation (see DECISIONS).
 
-## Аналитика
+## Analytics
 
-`src/components/Analytics.tsx` — Vercel Web Analytics: обезличенные просмотры страниц,
-без кук и постоянных идентификаторов. Два нюанса, без которых она была бы бесполезна или
-шумела:
+`src/components/Analytics.tsx` — Vercel Web Analytics: anonymised page views, with
+no cookies and no persistent identifiers. Two details, without which it would be
+useless or noisy:
 
-- рендерится только на доменах Vercel — скрипт отдаёт сам Vercel, на GitHub Pages он бы
-  просто отдавал 404;
-- `beforeSend` переписывает адрес, потому что при HashRouter экран лежит во фрагменте, а
-  фрагмент аналитика не видит: без этого все просмотры пришли бы как `/`. Заодно
-  `/show/:id` и `/movie/:id` схлопываются в `/show` и `/movie`, иначе отчёт превратился бы
-  в список тайтлов — а это уже данные о том, что человек смотрит.
+- it only renders on Vercel domains — Vercel serves the script itself, and on
+  GitHub Pages it would simply 404;
+- `beforeSend` rewrites the address, because with HashRouter the screen lives in
+  the fragment and analytics cannot see the fragment: without this, every view
+  would arrive as `/`. It also collapses `/show/:id` and `/movie/:id` into `/show`
+  and `/movie`, otherwise the report would turn into a list of titles — and that is
+  already data about what a person watches.
 
-**Ограничение, проверенное на живом проекте:** событие отправляется только при полной
-загрузке страницы. Смена экрана меняет лишь фрагмент, компонент не считает это навигацией,
-и новых просмотров не приходит — в отчёте виден **экран входа**, а не весь путь. Обойти
-можно было бы своими событиями, но на тарифе Hobby они недоступны, а переход на
-BrowserRouter сломал бы GitHub Pages, где нет серверных переписываний.
+**A limitation verified on the live project:** an event is only sent on a full page
+load. Changing screens only changes the fragment, the component does not treat that
+as navigation, and no new views arrive — the report shows the **entry screen**, not
+the whole path. Custom events could work around it, but they are unavailable on the
+Hobby plan, and switching to BrowserRouter would break GitHub Pages, where there
+are no server-side rewrites.
 
-Поэтому разделение такое: Vercel отвечает на «сколько людей, откуда, с чего заходят», а
-поэкранная статистика живёт на локальной `/insights`. Смотреть цифры — в дашборде Vercel;
-внутри приложения их показать нельзя, нужен серверный токен.
+Hence the split: Vercel answers "how many people, from where, on what", while
+per-screen statistics live in the local `/insights`. Look at the numbers in the
+Vercel dashboard; they cannot be shown inside the app, which would need a server
+token.
 
-## Прокси к TMDB
+## The TMDB proxy
 
-`api/tmdb.js` — ESM-функция Vercel (в `package.json` стоит `"type": "module"`,
-CommonJS там не заработает). Задачи ровно три: не пускать ключ в браузер, разрешать только
-read-only пути к фильмам, кэшировать ответы на edge. Проверяет `Origin` (любой loopback +
-прод-домены), отдаёт 403 на неразрешённый путь, 503 если ключ не задан — клиент понимает
-503 как «TMDB здесь нет» и переключается на keyless-источники.
+`api/tmdb.js` is a Vercel ESM function (`package.json` has `"type": "module"`;
+CommonJS will not work there). It has exactly three jobs: keep the key out of the
+browser, allow only read-only movie paths, and cache responses at the edge. It
+checks the `Origin` (any loopback plus the production domains), returns 403 for a
+disallowed path and 503 if the key is unset — the client reads 503 as "there is no
+TMDB here" and switches to the key-free sources.
 
-Путь к TMDB передаётся параметром: `/api/tmdb?path=search/movie&query=...`, а не
-сегментами URL. Catch-all файл (`api/tmdb/[...path].js`) на Vercel сопоставлялся только с
-одним сегментом, из-за чего `/api/tmdb/search/movie` отдавал 404, не доходя до функции.
+The TMDB path is passed as a parameter: `/api/tmdb?path=search/movie&query=...`,
+not as URL segments. A catch-all file (`api/tmdb/[...path].js`) on Vercel only
+matched a single segment, so `/api/tmdb/search/movie` returned 404 without ever
+reaching the function.
 
-Изображения TMDB отдаются напрямую с `image.tmdb.org`. **Проксировать картинки через себя
-не нужно** — это превратило бы нас из «ссылающегося» в «распространителя» чужого контента.
+TMDB images are served directly from `image.tmdb.org`. **There is no need to proxy
+images through us** — that would turn us from someone who links to someone who
+distributes third-party content.
 
 ## PWA
 
-Service worker кэширует статику (precache) и внешние ответы (runtime): TVmaze и
-Cinemeta/iTunes — `NetworkFirst` с таймаутом, постеры — `CacheFirst` на 30 дней. Поэтому
-приложение открывается и показывает библиотеку офлайн.
+The service worker caches static assets (precache) and external responses
+(runtime): TVmaze and Cinemeta/iTunes use `NetworkFirst` with a timeout, and
+posters use `CacheFirst` for 30 days. That is why the app opens and shows the
+library offline.
 
-Тема применяется инлайновым скриптом в `index.html` **до первой отрисовки**, иначе при
-закреплённой тёмной теме экран моргает белым.
+The theme is applied by an inline script in `index.html` **before the first paint**,
+otherwise the screen flashes white when the dark theme is pinned.
 
-Сборка знает про подпуть: `BASE_PATH=/film-table/` для GitHub Pages, пусто для корня.
+The build knows about the subpath: `BASE_PATH=/film-table/` for GitHub Pages, empty
+for the root.
