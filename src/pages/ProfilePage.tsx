@@ -11,7 +11,8 @@ import { YearReview } from '../components/YearReview'
 import { AutoBackup } from '../components/AutoBackup'
 import { SupportLinks } from '../components/Support'
 import { Feedback } from '../components/Feedback'
-import { exportJsonFile } from '../lib/export'
+import { exportJsonFile, isNativeApp } from 'tables-core'
+import { native } from '../lib/native'
 import { formatBigDuration } from '../lib/format'
 import { Poster } from '../components/ui'
 import { IconDownload, IconTrash, IconUpload, IconUser } from '../components/Icons'
@@ -74,8 +75,14 @@ export default function ProfilePage() {
   const doExport = async () => {
     const backup = buildBackup()
     const name = `filmtable-backup-${new Date().toISOString().slice(0, 10)}.json`
-    const outcome = await exportJsonFile(backup, name)
+    const outcome = await exportJsonFile(backup, name, native)
+    // Closing the share sheet is an answer, not an error; a real failure has to be said
+    // out loud, or someone walks away believing they have a backup.
     if (outcome === 'cancelled') return
+    if (outcome === 'failed') {
+      showToast('Export failed — the backup was not saved')
+      return
+    }
     useStats.getState().recordExport()
     showToast('Backup exported')
   }
@@ -215,7 +222,12 @@ export default function ProfilePage() {
             <IconDownload size={20} />
             <div>
               <div className="datarow-title">Export backup</div>
-              <div className="datarow-sub">Download your library as a JSON file</div>
+              <div className="datarow-sub">
+                {/* In the app the file goes to the share sheet, not a download folder. */}
+                {isNativeApp()
+                  ? 'Save your library as a JSON file'
+                  : 'Download your library as a JSON file'}
+              </div>
             </div>
           </button>
           <button className="datarow" onClick={() => fileRef.current?.click()}>

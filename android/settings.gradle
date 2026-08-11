@@ -1,0 +1,14 @@
+// The Capacitor plugin modules ask for a Java 21 toolchain. Gradle will not go looking
+// for one on its own, and a machine with only a newer JDK installed fails the build with
+// "Cannot find a Java installation ... matching languageVersion=21". This resolver lets
+// Gradle fetch the matching JDK itself, so the build does not depend on which JDKs
+// happen to be installed.
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+}
+
+include ':app'
+include ':capacitor-cordova-android-plugins'
+project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
+
+apply from: 'capacitor.settings.gradle'

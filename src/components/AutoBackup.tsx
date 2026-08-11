@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { isNativeApp } from 'tables-core'
 import { useAutoBackup } from '../store/backup'
 import { IconDownload } from './Icons'
 
@@ -14,6 +15,15 @@ export function AutoBackup() {
     void init()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  if (isNativeApp()) {
+    return (
+      <p className="chips-hint">
+        Your library is stored inside the app, where clearing a browser cannot reach it.
+        Deleting the app still takes it — export a copy now and then.
+      </p>
+    )
+  }
 
   if (state === 'unsupported') {
     return (

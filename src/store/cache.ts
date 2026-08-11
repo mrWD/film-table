@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { ShowCacheEntry, ShowSummary } from '../lib/types'
 import { fetchShowWithEpisodes } from '../lib/api'
-import { idbStorage } from '../lib/idb-storage'
+import { deviceStorage } from '../lib/storage'
 
 const TTL_MS = 12 * 60 * 60 * 1000
 
@@ -31,7 +31,7 @@ export const useShowCache = create<CacheState>()(
       name: 'filmtable-cache-v1',
       version: 1,
       // Episode lists for every followed show — the other blob that outgrew localStorage.
-      storage: createJSONStorage(() => idbStorage),
+      storage: createJSONStorage(() => deviceStorage),
     },
   ),
 )

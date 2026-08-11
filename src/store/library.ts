@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { BackupFile, Episode, Movie, MovieResult, TrackedShow } from '../lib/types'
-import { idbStorage } from '../lib/idb-storage'
+import { successFeedback, tapFeedback } from '../lib/native-ui'
+import { deviceStorage } from '../lib/storage'
 import { useStats } from './stats'
 
 interface LibraryState {
@@ -80,7 +81,10 @@ export const useLibrary = create<LibraryState>()(
       setEpisodeWatched: (showId, episodeId, watched) => {
         // Side effects stay outside the updater: it must be pure, and StrictMode
         // runs it twice, which would double every counter.
-        if (watched) useStats.getState().recordCheckIn()
+        if (watched) {
+          useStats.getState().recordCheckIn()
+          tapFeedback()
+        }
         set((s) => {
           const t = s.shows[showId]
           if (!t) return s
@@ -134,7 +138,10 @@ export const useLibrary = create<LibraryState>()(
         }),
 
       setMovieStatus: (id, status) => {
-        if (status === 'watched') useStats.getState().recordMovieMarked()
+        if (status === 'watched') {
+          useStats.getState().recordMovieMarked()
+          successFeedback()
+        }
         set((s) => {
           const m = s.movies[id]
           if (!m) return s
@@ -171,10 +178,10 @@ export const useLibrary = create<LibraryState>()(
     {
       name: 'filmtable-library-v1',
       version: 1,
-      // IndexedDB via idbStorage: no ~5 MB localStorage ceiling, and the value migrates
-      // once from localStorage on first load (see idb-storage.ts). Hydration is async —
-      // main.tsx holds the first render until it settles.
-      storage: createJSONStorage(() => idbStorage),
+      // IndexedDB in a browser, a file in private app storage natively — and one
+      // migration each way behind it (see lib/storage.ts). Hydration is async either
+      // way, so main.tsx holds the first render until it settles.
+      storage: createJSONStorage(() => deviceStorage),
       // A movie's overview is re-fetched on its detail page and never shown in a list, so
       // writing it only inflates the library. Shows are unaffected: they are stored by id.
       partialize: (s) => ({

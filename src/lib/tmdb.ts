@@ -1,3 +1,4 @@
+import { isNativeApp } from 'tables-core'
 import type { MovieResult } from './types'
 
 /**
@@ -7,7 +8,21 @@ import type { MovieResult } from './types'
  * session and callers fall back to the keyless sources.
  */
 
-const API_BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? '').replace(/\/$/, '')
+/**
+ * The native app has no origin to be same as — it is served from capacitor://localhost —
+ * so it must call the deployment by its full address. `VITE_API_BASE` still wins when
+ * set; the fallback keeps a store build from silently losing TMDB because one
+ * environment variable was forgotten. (Losing it is survivable here — search falls back
+ * to Cinemeta and iTunes — but it should not happen by accident.)
+ *
+ * The proxy needs no change: its origin check parses `capacitor://localhost` to the host
+ * `localhost`, which its loopback rule already permits.
+ */
+const PRODUCTION_API = 'https://film-table.vercel.app'
+
+const API_BASE = (
+  (import.meta.env.VITE_API_BASE as string | undefined) ?? (isNativeApp() ? PRODUCTION_API : '')
+).replace(/\/$/, '')
 
 let disabled = false
 

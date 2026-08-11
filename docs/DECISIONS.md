@@ -26,8 +26,8 @@ localStorage is the first thing the OS reclaims — while IndexedDB is both
 sturdier and what a native storage plugin migrates from. The owner approved the
 change explicitly (2026-08-11).
 
-`library` and `cache` moved to IndexedDB (`filmtable-kv`, adapter in
-`lib/idb-storage.ts`); tiny prefs (`theme`, `region`, `stats`) stay in
+`library` and `cache` moved to IndexedDB (`filmtable-kv`, adapter now
+`createDeviceStorage` in `tables-core`); tiny prefs (`theme`, `region`, `stats`) stay in
 localStorage — `theme` must be readable synchronously or the first paint
 flashes the wrong theme. The migration copies the old localStorage value into
 IndexedDB on first read and leaves the original untouched, frozen at the
@@ -142,3 +142,35 @@ Aggregated numbers cannot be shown inside the app without a server token, so
 - **Screenshots taken during loading.** Posters load lazily; empty tiles in a
   screenshot more often mean "not loaded yet" than breakage. Check `naturalWidth`
   rather than trusting your eyes.
+
+## Wrapped for the stores with Capacitor (2026-08)
+
+The same Vite build, inside a native shell: `webDir` is the ordinary `dist`, so
+a release is `npm run build` plus `npx cap sync`. `HashRouter` already suited the
+`capacitor://localhost` origin, so routing needed nothing.
+
+The library moved again, from IndexedDB to a JSON file in private app storage
+(`createDeviceStorage` in `tables-core`). A WebView's IndexedDB is *site data* to
+the OS: iOS may reclaim it under storage pressure and "Offload App" discards it,
+while a file in the app container survives both and rides along in the device
+backup. Same one-way copy as before — read once, write the file, leave the old
+value frozen.
+
+Two findings from the pilot, both already paid for:
+
+- **Every browser test for installedness answers "no" inside the WebView**, so
+  the app offered to add itself to the home screen while already installed.
+  `isNativeApp()` in `tables-core` is the fix.
+- **The status bar icons follow the system, not this app's theme.** Measured on
+  targetSdk 36: the web view is inset by 24 CSS px top and bottom,
+  `env(safe-area-inset-*)` reads 0, and those strips are painted with the window
+  background — which comes from the `DayNight` theme and so follows the system.
+  Driving the icons from the app's theme puts white icons on a white strip the
+  moment someone picks Dark on a light phone. Known cost: with the theme
+  overridden against the system, those strips keep the system's colour.
+
+The native build reaches the TMDB proxy by absolute URL — there is no origin for
+it to be same as. `VITE_API_BASE` still wins; the fallback to the production
+address keeps a store build from silently losing TMDB. The proxy needed no
+change: its origin check parses `capacitor://localhost` to the host `localhost`,
+which its loopback rule already permits (verified against production).
