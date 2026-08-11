@@ -37,7 +37,9 @@ src/pages/        Shows, Movies, Explore, ShowDetail, MovieDetail, Profile, Insi
 
 ## Data model
 
-There are two independent keys in `localStorage`.
+There are two independent keys, both in IndexedDB (`filmtable-kv`, adapter in
+`lib/idb-storage.ts`; they lived in `localStorage` until 2026-08 — see
+DECISIONS).
 
 **`filmtable-library-v1`** — what belongs to the user and goes into the backup:
 
@@ -143,28 +145,29 @@ them would understate the year.
 
 ## Storage: how much fits and what is wrong with it
 
-Measurements in Chromium (July 2026): localStorage caps out at **4.94 MB** per
-origin, even when `navigator.storage.estimate()` reports 10 GB — it has its own
-quota.
+Since 2026-08 the library and cache live in IndexedDB, whose quota is measured
+in gigabytes, so size is no longer the pressing constraint. The history still
+explains the code: localStorage capped out at **4.94 MB** per origin in Chromium
+(measured July 2026), even when `navigator.storage.estimate()` reported 10 GB.
 
 Shows are stored by id rather than as a snapshot, so the heavy part is only the map
 of watched episodes: **24 B per episode**. All 802 episodes of The Simpsons come to
-19 KB; 300 shows at 60 episodes each is 422 KB, 8% of the limit. A film is **192 B**
+19 KB; 300 shows at 60 episodes each is 422 KB. A film is **192 B**
 as a snapshot; the description added that much again and more.
 
-Three things follow from this, and all three are already done:
+What the localStorage era left behind, and what remains true:
 
-- **`description` is not written to storage.** It is re-fetched every time the
-  detail page opens and is never shown in lists, yet it tripled the size of a
-  record. It is stripped via `partialize` and kept in memory for the session. For
-  records added earlier, the description disappears on the very first write to the
-  library — `partialize` applies to the whole store at once.
-- **`QuotaExceededError` is caught.** Without that, the exception was thrown in the
-  middle of an update, the change was silently lost, and the person found out much
-  later.
+- **`description` is still not written to storage.** It is re-fetched every time
+  the detail page opens and is never shown in lists; writing it would only
+  inflate the library and the backup file. It is stripped via `partialize` and
+  kept in memory for the session.
+- **Write failures are still caught** — in `idb-storage.ts` now. A failed write
+  toasts once and asks for an export instead of silently losing the change.
 - **The app offers to install itself to the home screen.** This is not marketing:
   Safari clears script storage for sites that have not been visited in a while, and
   the rule does not apply to installed apps. That is what the prompt's text says.
+  This applies to IndexedDB exactly as it did to localStorage — moving between
+  them changes quotas, not eviction.
 
 The cost of writing is not a problem: zustand serialises the whole store on every
 change, but at 2,000 records (2.5 MB) that is 4.5 ms to serialise and 1.8 ms to

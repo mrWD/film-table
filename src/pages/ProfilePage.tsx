@@ -11,6 +11,7 @@ import { YearReview } from '../components/YearReview'
 import { AutoBackup } from '../components/AutoBackup'
 import { SupportLinks } from '../components/Support'
 import { Feedback } from '../components/Feedback'
+import { exportJsonFile } from '../lib/export'
 import { formatBigDuration } from '../lib/format'
 import { Poster } from '../components/ui'
 import { IconDownload, IconTrash, IconUpload, IconUser } from '../components/Icons'
@@ -70,15 +71,11 @@ export default function ProfilePage() {
     { label: 'Movies watched', list: Object.values(movies).filter((m) => m.status === 'watched') },
   ]
 
-  const doExport = () => {
+  const doExport = async () => {
     const backup = buildBackup()
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `filmtable-backup-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    const name = `filmtable-backup-${new Date().toISOString().slice(0, 10)}.json`
+    const outcome = await exportJsonFile(backup, name)
+    if (outcome === 'cancelled') return
     useStats.getState().recordExport()
     showToast('Backup exported')
   }
@@ -214,7 +211,7 @@ export default function ProfilePage() {
         <h2 className="h2">Data</h2>
         <BackupNudge items={Object.keys(shows).length + Object.keys(movies).length} />
         <div className="datacard">
-          <button className="datarow" onClick={doExport}>
+          <button className="datarow" onClick={() => void doExport()}>
             <IconDownload size={20} />
             <div>
               <div className="datarow-title">Export backup</div>

@@ -12,10 +12,28 @@ to the stores, if ever wanted, is Capacitor with the same code.
 
 ## No backend for user data
 
-The library lives in `localStorage`. Consequences we deliberately accepted: no sync
+The library lives on the device. Consequences we deliberately accepted: no sync
 between devices (manual Export/Import instead), data is tied to the domain (so
 moving to another domain requires a migration), and we cannot lose anyone's data
 because we do not have it. The last point also disposes of GDPR questions.
+
+## IndexedDB instead of localStorage (2026-08)
+
+Originally the device store was `localStorage`. Two of its limits started to
+matter on the road to phones: the ~5 MB ceiling (the reason movie descriptions
+were stripped and a quota guard existed), and iOS, where a wrapped WebView's
+localStorage is the first thing the OS reclaims — while IndexedDB is both
+sturdier and what a native storage plugin migrates from. The owner approved the
+change explicitly (2026-08-11).
+
+`library` and `cache` moved to IndexedDB (`filmtable-kv`, adapter in
+`lib/idb-storage.ts`); tiny prefs (`theme`, `region`, `stats`) stay in
+localStorage — `theme` must be readable synchronously or the first paint
+flashes the wrong theme. The migration copies the old localStorage value into
+IndexedDB on first read and leaves the original untouched, frozen at the
+migration moment: rolling back to an older build then finds the library as of
+that moment rather than nothing. Hydration became asynchronous, so `main.tsx`
+holds the first render until it settles (a few ms, with a 2.5 s backstop).
 
 ## Sources complement each other rather than replacing one another
 

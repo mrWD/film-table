@@ -26,9 +26,11 @@ The owner and, as of today, the only target user is **mrWD** (Viktor,
 
 ## Core principles (break only with the owner's explicit consent)
 
-1. **No backend for user data.** The library lives in the device's
-   `localStorage`. No accounts, no analytics, no data collection. The only server
-   code is a thin proxy to TMDB, which stores nothing.
+1. **No backend for user data.** The library lives on the device — IndexedDB
+   for the library and cache, localStorage for small prefs (see DECISIONS,
+   "IndexedDB instead of localStorage"). No accounts, no analytics, no data
+   collection. The only server code is a thin proxy to TMDB, which stores
+   nothing.
 2. **The app must work without keys.** TMDB is an enhancement, not a dependency.
    If the proxy is unavailable or the key is unset, movie search silently switches
    to Cinemeta/iTunes. That fallback must not be broken.
