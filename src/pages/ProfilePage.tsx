@@ -13,6 +13,7 @@ import { SupportLinks } from '../components/Support'
 import { Feedback } from '../components/Feedback'
 import { exportJsonFile, isNativeApp } from 'tables-core'
 import { native } from '../lib/native'
+import { useReminders } from '../store/reminders'
 import { formatBigDuration } from '../lib/format'
 import { Poster } from '../components/ui'
 import { IconDownload, IconTrash, IconUpload, IconUser } from '../components/Icons'
@@ -48,6 +49,8 @@ export default function ProfilePage() {
   const setCountry = useRegion((s) => s.setCountry)
   const theme = useTheme((s) => s.theme)
   const setTheme = useTheme((s) => s.setTheme)
+  const alertsOn = useReminders((s) => s.enabled)
+  const setAlertsOn = useReminders((s) => s.setEnabled)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const stats = buildStats(shows, entries, movies)
@@ -213,6 +216,29 @@ export default function ProfilePage() {
             : `Always ${theme}, whatever the device is set to.`}
         </p>
       </section>
+
+      {isNativeApp() && (
+        <section>
+          <h2 className="h2">Episode alerts</h2>
+          <div className="chips">
+            {([false, true] as const).map((on) => (
+              <button
+                key={String(on)}
+                className={`chip${alertsOn === on ? ' active' : ''}`}
+                aria-pressed={alertsOn === on}
+                onClick={() => void setAlertsOn(on)}
+              >
+                {on ? 'ON' : 'OFF'}
+              </button>
+            ))}
+          </div>
+          <p className="chips-hint">
+            {alertsOn
+              ? 'A notification when an episode of a show you follow airs. Built from this device — nothing leaves it.'
+              : 'No alerts. Turning this on asks the system for permission.'}
+          </p>
+        </section>
+      )}
 
       <section>
         <h2 className="h2">Data</h2>
