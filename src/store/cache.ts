@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
 import type { ShowCacheEntry, ShowSummary } from '../lib/types'
 import { fetchShowWithEpisodes } from '../lib/api'
+import { deviceStorage } from '../lib/storage'
 
 const TTL_MS = 12 * 60 * 60 * 1000
 
@@ -26,7 +27,12 @@ export const useShowCache = create<CacheState>()(
       put: (entry) =>
         set((s) => ({ entries: { ...s.entries, [entry.show.id]: entry } })),
     }),
-    { name: 'filmtable-cache-v1', version: 1 },
+    {
+      name: 'filmtable-cache-v1',
+      version: 1,
+      // Episode lists for every followed show — the other blob that outgrew localStorage.
+      storage: createJSONStorage(() => deviceStorage),
+    },
   ),
 )
 

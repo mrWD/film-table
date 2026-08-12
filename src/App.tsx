@@ -12,8 +12,10 @@ import { SupportFab } from './components/Support'
 import { MigrationBanner } from './components/MigrationBanner'
 import { InstallHint } from './components/InstallHint'
 import { Analytics } from './components/Analytics'
+import { rescheduleEpisodeAlerts } from './lib/reminders'
 import { useLibrary } from './store/library'
 import { refreshShows } from './store/cache'
+import { useReminders } from './store/reminders'
 import { watchSystemTheme } from './store/theme'
 import { beginSessionOnce, useStats } from './store/stats'
 
@@ -23,7 +25,11 @@ function Shell() {
 
   useEffect(() => {
     const { shows } = useLibrary.getState()
-    void refreshShows(Object.values(shows).map((t) => t.id))
+    // The alert schedule is rebuilt after the refresh so it sees today's air dates;
+    // refreshShows resolves even offline, so the rebuild always runs.
+    void refreshShows(Object.values(shows).map((t) => t.id)).then(() =>
+      rescheduleEpisodeAlerts(useReminders.getState().enabled),
+    )
     beginSessionOnce()
     return watchSystemTheme()
   }, [])

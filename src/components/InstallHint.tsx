@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
+import { isIosSafari, isStandalone } from 'tables-core'
 import { IconX } from './Icons'
 
 /**
  * Nudge to install the app to the home screen.
  *
- * This is not a growth banner — it protects the data. The library lives in localStorage,
+ * This is not a growth banner — it protects the data. The library lives on the device,
  * and Safari's tracking prevention clears script-writable storage for sites not visited
  * for several days. A page kept in a browser tab can therefore lose the library on its
  * own; the same page installed to the home screen is exempt. So the copy says why.
@@ -19,22 +20,6 @@ const DISMISSED = 'filmtable-install-hint-dismissed'
 interface PromptEvent extends Event {
   prompt: () => Promise<void>
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
-
-function isStandalone(): boolean {
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    // iOS marks installed apps here rather than through display-mode.
-    (window.navigator as { standalone?: boolean }).standalone === true
-  )
-}
-
-/** iPadOS reports itself as a Mac, so touch support is part of the test. */
-function isIosSafari(): boolean {
-  const ua = navigator.userAgent
-  const iOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
-  const webkit = /WebKit/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua)
-  return iOS && webkit
 }
 
 export function InstallHint() {

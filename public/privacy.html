@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FilmTable — Privacy</title>
+<style>
+  body { max-width: 40rem; margin: 3rem auto; padding: 0 1rem; font: 16px/1.6 system-ui, sans-serif; color: #1a1a1a; background: #f7f7f7; }
+  h1 { font-size: 1.5rem; } h2 { font-size: 1.1rem; margin-top: 2rem; }
+  @media (prefers-color-scheme: dark) { body { color: #e5e5e5; background: #121214; } }
+</style>
+</head>
+<body>
+<h1>FilmTable — Privacy</h1>
+<p><em>Last updated: 2026-08-11</em></p>
+
+<p>FilmTable is a personal tracker for TV shows and movies. The shortest honest summary: <strong>your
+library never leaves your device, and we could not read it if we wanted to.</strong></p>
+
+<h2>What we store</h2>
+<p>Nothing. There are no accounts, no sign-in, and no server that holds user data. Your
+library lives in your browser&rsquo;s storage (on the web) or in the app&rsquo;s own private
+storage (in the installed app). Deleting your browsing data or the app deletes it &mdash;
+which is why the app keeps offering you an export.</p>
+
+<h2>What leaves your device</h2>
+<p>Searching the catalogue sends your query to the services the catalogue comes from:
+TVmaze, the iTunes Search API, Cinemeta and — through our own proxy — TMDB. Like any website you visit, they see the request and your IP address. Cover
+and poster images load from their image hosts the same way.</p>
+<p>Search queries to TMDB pass through our proxy at film-table.vercel.app, which exists only to keep the API key off your device. It forwards the query, caches popular responses at the edge, and stores nothing about you.</p>
+
+<h2>Analytics</h2>
+<p>The website may report cookieless page views to Vercel Web Analytics &mdash; a screen
+name, never a title, a search term or an identifier. <strong>The installed app reports
+nothing at all.</strong></p>
+<h2>Notifications</h2>
+<p>If you turn on episode alerts, the schedule is computed on your device from air dates already in its cache and handed to your phone’s own notification system. Nothing about your shows leaves the device for this.</p>
+
+<h2>Backups</h2>
+<p>An exported backup is an ordinary file created at your request. It goes wherever you
+send it &mdash; your Files, your drive, your email &mdash; and never to us.</p>
+
+<h2>Contact</h2>
+<p>Questions: <a href="mailto:lvigtor@gmail.com">lvigtor@gmail.com</a></p>
+</body>
+</html>
