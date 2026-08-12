@@ -13,6 +13,7 @@ import { MigrationBanner } from './components/MigrationBanner'
 import { InstallHint } from './components/InstallHint'
 import { Analytics } from './components/Analytics'
 import { rescheduleEpisodeAlerts } from './lib/reminders'
+import { refreshWidgets } from './lib/widget'
 import { useLibrary } from './store/library'
 import { refreshShows } from './store/cache'
 import { useReminders } from './store/reminders'
@@ -30,8 +31,17 @@ function Shell() {
     void refreshShows(Object.values(shows).map((t) => t.id)).then(() =>
       rescheduleEpisodeAlerts(useReminders.getState().enabled),
     )
+    // The widgets are fed from the same store the screens read, so a subscription is
+    // enough: every check-in, follow or unfollow pushes a fresh snapshot, and the app
+    // never has to remember to call this from each of those places.
+    void refreshWidgets()
+    const stopWidgets = useLibrary.subscribe(() => void refreshWidgets())
     beginSessionOnce()
-    return watchSystemTheme()
+    const stopTheme = watchSystemTheme()
+    return () => {
+      stopWidgets()
+      stopTheme()
+    }
   }, [])
 
   useEffect(() => {
