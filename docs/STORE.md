@@ -63,3 +63,16 @@ The honest answers, same on both stores:
       `./gradlew bundleRelease` (.aab) and iOS Archive in Xcode
 - [ ] Content rating questionnaire (both stores; the app has no user content)
 - App Store: mention the TMDB attribution requirement is already in the description.
+
+## Store assets in this repo
+
+- `docs/store/screenshots/ios-6.9/` — 1320×2868, the size Apple asks for. Light theme.
+- `docs/store/screenshots/android/` — 1080×2400. Dark theme, on purpose: between the
+  two sets a reviewer sees the app in both themes, which is worth more than matching.
+- `docs/store/feature-graphic-1024x500.png` — Play's feature graphic.
+
+All screenshots were taken from a library of **real** titles fetched from the app's own
+sources, not mocked up. Anyone regenerating them should keep that rule and one more,
+learned the hard way: the seed has to store exactly what the app itself would store.
+Trimming an author list or writing a raw upstream date straight through produces a
+screenshot that advertises behaviour the app does not have.
