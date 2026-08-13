@@ -174,3 +174,37 @@ it to be same as. `VITE_API_BASE` still wins; the fallback to the production
 address keeps a store build from silently losing TMDB. The proxy needed no
 change: its origin check parses `capacitor://localhost` to the host `localhost`,
 which its loopback rule already permits (verified against production).
+
+## Home-screen widgets (iOS)
+
+The first part of the app that is **not** shared React: a widget runs in its own
+process and cannot render a WebView. iOS needs a WidgetKit extension in Swift, so
+`ios/App/FilmTableWidget/` holds the SwiftUI, and `ios/App/App/WidgetBridge.swift` is a
+small in-app Capacitor plugin that hands it data.
+
+The two processes meet in an **App Group** (`group.com.mrwd.filmtable`): the app writes a snapshot
+there as JSON, the widget only reads. `src/lib/widget.ts` builds that snapshot from
+the same store the screens read, so the widget cannot drift into disagreeing with
+the app. Covers are copied in as files because WidgetKit cannot fetch images.
+
+Nothing leaves the device — an App Group is on-device storage shared between two of
+our own processes.
+
+Things that cost a rebuild each, all of which look like "nothing happens":
+
+- **`capacitorDidLoad()` does not exist** in this Capacitor version. The override
+  compiles, never runs, and the plugin reports "not implemented on ios".
+  Registration goes in `viewDidLoad`; check the shipped framework header before
+  trusting a hook name.
+- **`SceneDelegate` builds the root controller in code**, so editing the
+  storyboard's custom class changes nothing.
+- **The team must be set in the project**, not only on the `xcodebuild` command
+  line. Without it Xcode's Signing & Capabilities editor refuses to load the
+  capability list at all, and App Groups cannot even be searched for. With it,
+  `-allowProvisioningUpdates` registers new groups on its own.
+- **Entitlements are absent from a simulator build made with code signing off**,
+  and `codesign -d` shows nothing for simulator builds even when they are present.
+  Ask for the App Group container instead of reading the binary.
+
+The Xcode target is added by `scripts/add-widget-target.rb`, which is idempotent —
+run it again and it repairs the project rather than duplicating the target.
