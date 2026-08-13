@@ -21,6 +21,7 @@
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
 		B20130D87C6B0CBDF12F4302 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E211211694CECF8D156481F2 /* Foundation.framework */; };
 		BD7A513496CC109111106855 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0548B775520041B887E463E /* MainViewController.swift */; };
+		E092BE5686A6303A44052A1A /* AIBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ED57A3BFC6ED03D6784946D /* AIBridge.swift */; };
 		E6259305B3C0BF5B17A963D5 /* FilmTableWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 458E9AD3F5D5029F1F1CD592 /* FilmTableWidget.appex */; };
 /* End PBXBuildFile section */
 
@@ -49,6 +50,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1ED57A3BFC6ED03D6784946D /* AIBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AIBridge.swift; sourceTree = "<group>"; };
 		25DE3445BAA85A4B00339027 /* FilmTableWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FilmTableWidget.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		458E9AD3F5D5029F1F1CD592 /* FilmTableWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FilmTableWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -124,6 +126,7 @@
 				7B5125F0990B4753FA8DF55A /* App.entitlements */,
 				8DFBF7658B7DF9F988F437B4 /* WidgetBridge.swift */,
 				B0548B775520041B887E463E /* MainViewController.swift */,
+				1ED57A3BFC6ED03D6784946D /* AIBridge.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -275,6 +278,7 @@
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
 				445BF9A263B1F5F474095782 /* WidgetBridge.swift in Sources */,
 				BD7A513496CC109111106855 /* MainViewController.swift in Sources */,
+				E092BE5686A6303A44052A1A /* AIBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -29,7 +29,7 @@ app_group_node = project.main_group['App'] || project.main_group
 # The reference is added inside the `App` group, which already carries `App/` in its own
 # path — so the name here is bare. Spelling it `App/WidgetBridge.swift` produces
 # `App/App/WidgetBridge.swift` and a build that cannot find its own input.
-%w[WidgetBridge.swift MainViewController.swift].each do |name|
+%w[WidgetBridge.swift MainViewController.swift AIBridge.swift].each do |name|
   next if app.source_build_phase.files_references.any? { |f| f.path == name }
   ref = app_group_node.files.find { |f| f.path == name } || app_group_node.new_reference(name)
   app.add_file_references([ref])

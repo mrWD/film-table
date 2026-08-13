@@ -208,3 +208,42 @@ Things that cost a rebuild each, all of which look like "nothing happens":
 
 The Xcode target is added by `scripts/add-widget-target.rb`, which is idempotent —
 run it again and it repairs the project rather than duplicating the target.
+
+## The on-device model: what it can and cannot be trusted with (2026-08-12)
+
+`ios/App/App/AIBridge.swift` exposes Apple's `FoundationModels` — the ~3B model behind
+Apple Intelligence — to the web layer, the same bridge shape as `WidgetBridge`. It runs
+on the device, so nothing from the library is sent anywhere; that is the only reason a
+language model belongs in this app at all.
+
+Measured on the simulator against the Mac's model, before building anything on it:
+
+| | Result |
+|---|---|
+| Availability | `available` |
+| First call | **6.8 s** — model load |
+| Warm calls | 0.6–0.9 s |
+| Summarising a sentence handed to it | correct |
+
+**Free-form prompting invents values.** Asked for "something short to watch tonight" it
+answered `genre: "comedy"` — a genre nobody mentioned — and `status: "completed"`, which
+is not one of this app's four statuses. JSON also came back wrapped in a markdown fence.
+
+**A schema fixes the vocabulary but not the guessing.** With `DynamicGenerationSchema`
+the values became ours (`Science-Fiction`, `stopped`), but the model still filled fields
+the request never mentioned.
+
+**An explicit `any` option overcorrects.** With `any` in every enum plus "do not guess",
+it answered `any` even for "sci-fi", which the request states outright.
+
+**Examples in the instructions leak into the answers.** Spelling out `"sci-fi" is
+Science-Fiction, "stopped" is a status` produced `status: stopped` for a request that
+said nothing of the sort.
+
+The conclusion is not that the model is useless — it is that **turning a phrase into
+filters is the wrong job for it**. Keyword matching against our own genre vocabulary
+does that part better and instantly. What the model is genuinely good at is reading text
+it was handed: summarising, tagging, picking the matching item out of candidates. Any
+feature built here should hand it text and ask about *that text*, never ask it to
+produce structure from a vague sentence.
+
