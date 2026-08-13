@@ -55,6 +55,12 @@ private struct Row: View {
 
     private var when: String? {
         guard let airsAt = entry.airsAt else { return nil }
+        // An episode that is already out is described by what you can do with it, not by
+        // the day it arrived: "Out now" beats "12 Aug" when the point is that it is
+        // waiting for you.
+        if entry.aired == true {
+            return Calendar.current.isDateInToday(airsAt) ? "Out today" : "Out now"
+        }
         let formatter = DateFormatter()
         formatter.dateFormat = Calendar.current.isDateInToday(airsAt) ? "HH:mm" : "d MMM"
         return formatter.string(from: airsAt)
@@ -139,13 +145,13 @@ struct UpcomingWidget: Widget {
             ListView(
                 title: "Upcoming",
                 entries: entry.snapshot.upcoming,
-                emptyText: "No air dates known yet.",
+                emptyText: "Nothing out or scheduled right now.",
                 showsDate: true
             )
             .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Upcoming")
-        .description("Episodes about to air, with the day and channel.")
+        .description("Episodes already out and still waiting, then what airs next.")
         .supportedFamilies([.systemMedium, .systemLarge])
     }
 }

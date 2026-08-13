@@ -1,6 +1,7 @@
 import { registerPlugin } from '@capacitor/core'
 import { isNativeApp } from 'tables-core'
 import { epCode } from './format'
+import { epDate } from '../store/selectors'
 import { useLibrary } from '../store/library'
 import { useShowCache } from '../store/cache'
 import { buildUpcoming, buildWatchItems } from '../store/selectors'
@@ -31,6 +32,8 @@ interface Entry {
   episode: string
   title: string
   airsAt?: number
+  /** True for an episode that is already out and still unwatched. */
+  aired?: boolean
   network?: string
   remaining?: number
   poster?: string
@@ -63,18 +66,53 @@ export async function refreshWidgets(): Promise<void> {
         poster: item.show.image ? posterName(item.show.id) : undefined,
       }))
 
-    const upcoming: Entry[] = buildUpcoming(shows, entries, now)
+    // Deliberately not `buildUpcoming` alone: that one hides everything already aired
+    // except today's, because the app's Upcoming tab is a schedule. On a widget the
+    // interesting rows are the ones you can act on — an episode that came out on Tuesday
+    // and is still unwatched belongs above one that airs on Friday. Sorting by date
+    // ascending puts the recent past first and the schedule after it, which is the order
+    // TV Time uses and the reason it reads well.
+    const RECENT_DAYS = 14
+    const since = now.getTime() - RECENT_DAYS * 86400000
+    const recentlyAired: Entry[] = []
+    for (const tracked of Object.values(shows)) {
+      if (tracked.status !== 'following') continue
+      const entry = entries[tracked.id]
+      if (!entry) continue
+      for (const ep of entry.episodes) {
+        const when = epDate(ep)
+        if (!when || tracked.watched[ep.id]) continue
+        const at = when.getTime()
+        if (at > now.getTime() || at < since) continue
+        recentlyAired.push({
+          id: String(entry.show.id),
+          show: entry.show.name,
+          episode: epCode(ep.season, ep.number),
+          title: ep.name,
+          airsAt: at,
+          aired: true,
+          network: entry.show.network ?? undefined,
+          poster: entry.show.image ? posterName(entry.show.id) : undefined,
+        })
+      }
+    }
+
+    const scheduled: Entry[] = buildUpcoming(shows, entries, now)
       .filter((u) => !u.aired)
-      .slice(0, LIMIT)
       .map((u) => ({
         id: String(u.show.id),
         show: u.show.name,
         episode: epCode(u.ep.season, u.ep.number),
         title: u.ep.name,
         airsAt: u.when.getTime(),
+        aired: false,
         network: u.show.network ?? undefined,
         poster: u.show.image ? posterName(u.show.id) : undefined,
       }))
+
+    const upcoming = [...recentlyAired, ...scheduled]
+      .sort((a, b) => (a.airsAt ?? 0) - (b.airsAt ?? 0))
+      .slice(0, LIMIT)
 
     await WidgetBridge.write({
       json: JSON.stringify({ upNext, upcoming, updatedAt: Date.now() }),

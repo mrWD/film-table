@@ -21,6 +21,9 @@ struct WidgetSnapshot: Codable {
         var title: String
         /// Absent for anything without a known air date.
         var airsAt: Date?
+        /// Already out and still unwatched — worth saying so, because the date alone
+        /// reads as a schedule and hides that the episode is watchable right now.
+        var aired: Bool?
         var network: String?
         /// How many more episodes are waiting after this one.
         var remaining: Int?
