@@ -96,6 +96,5 @@ export async function refreshWidgets(): Promise<void> {
     // but staying silent about it cost an hour once — so it says so where the device
     // log can see it.
     console.error('[widget] refresh failed', err)
-    console.error('[widget] refresh failed', err)
   }
 }

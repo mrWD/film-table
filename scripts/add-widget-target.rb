@@ -125,6 +125,12 @@ end
 # widget in the picker.
 app.build_configurations.each do |config|
   config.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'App/App.entitlements'
+  # Without a team in the project itself, Xcode's Signing & Capabilities editor refuses
+  # to load the capability list at all — "No development team is set", and App Groups
+  # cannot even be searched for. Passing the team on the xcodebuild command line is not
+  # enough, because the GUI never sees it.
+  config.build_settings['DEVELOPMENT_TEAM'] = TEAM
+  config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
 end
 
 app.add_dependency(widget)
