@@ -12,6 +12,9 @@ const TMDB = 'https://api.themoviedb.org/3/'
 function isAllowedPath(path) {
   return (
     path === 'search/movie' ||
+    // TMDB's own keyword vocabulary. It is what turns a description into something
+    // searchable — and what stops an invented phrase from becoming a search.
+    path === 'search/keyword' ||
     path === 'genre/movie/list' ||
     // Films matching a set of keyword ids — how "something like these" narrows from
     // "similar films" to the thing the person actually described.
