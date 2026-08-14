@@ -161,7 +161,13 @@ async function resolve(title: string): Promise<MovieResult | null> {
     // Russian titles rank correctly only when the search is told the language.
     for (const language of cyrillic ? ['ru-RU', undefined] : [undefined]) {
       const hits = await searchMoviesTmdb(query, language)
-      const best = (hits ?? []).find((m) => m.releaseDate)
+      const dated = (hits ?? []).filter((m) => m.releaseDate)
+      // The exact title wins over the popular one: asked for "The Raid", TMDB ranks
+      // "The Raid 2" first, and answering with the sequel to a film someone named is a
+      // small lie about what they said.
+      const exact = dated.find((m) => normalise(m.title) === normalise(query))
+      if (exact) return exact
+      const best = dated[0]
       if (!best) continue
       if (cyrillic || normalise(best.title).startsWith(normalise(query))) return best
     }
@@ -198,6 +204,10 @@ async function describedKeywords(rest: string, words: string[]): Promise<string[
 
   const found = new Set<string>()
   for (const term of [...new Set(terms)].slice(0, 8)) {
+    // "martial arts" is looked up before "arts" and "art", and all three are real
+    // vocabulary entries — keeping the fragments makes the app announce it is looking
+    // for "martial arts, arts and art", which is one thing said three times.
+    if ([...found].some((k) => k.includes(term))) continue
     const kw = await findKeyword(term)
     if (kw) found.add(kw.name)
     if (found.size >= 3) break
