@@ -36,8 +36,12 @@ export interface Suggestion {
   movie: MovieResult
   /** Which of the named films pointed here — computed, never phrased by the model. */
   because: string[]
-  /** Keywords this film shares with the ones that were named. */
+  /** The shared keywords worth showing — a row is a line, not a list. */
   shares: string[]
+  /** Which named films those particular keywords came from. */
+  sharedWith: string[]
+  /** How many were shared in all, which is what the ranking uses. */
+  shareCount: number
   /** Keywords from the description itself, when the description landed on real ones. */
   matches: string[]
 }
@@ -165,17 +169,24 @@ async function resolve(title: string): Promise<MovieResult | null> {
   return null
 }
 
+/** What the request says apart from the titles: "corridor fights", "с драками". */
+function description(text: string, titles: string[]): { rest: string; words: string[] } {
+  let rest = text
+  for (const t of titles) rest = rest.replace(t, ' ')
+  return {
+    rest,
+    words: rest
+      .split(/[^\p{L}\p{N}]+/u)
+      .map((w) => w.toLowerCase())
+      .filter((w) => w.length > 2 && !NOT_A_TITLE.has(w)),
+  }
+}
+
 /**
  * The part of the request that is not a title, turned into TMDB keywords — only the ones
  * that exist and carry enough films to mean anything.
  */
-async function describedKeywords(text: string, titles: string[]): Promise<string[]> {
-  let rest = text
-  for (const t of titles) rest = rest.replace(t, ' ')
-  const words = rest
-    .split(/[^\p{L}\p{N}]+/u)
-    .map((w) => w.toLowerCase())
-    .filter((w) => w.length > 2 && !NOT_A_TITLE.has(w))
+async function describedKeywords(rest: string, words: string[]): Promise<string[]> {
   if (words.length === 0) return []
 
   // Pairs first: "martial arts" is a keyword, "martial" on its own is not. Plurals are
@@ -223,16 +234,23 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
   const empty = { references: [], described: [], describedNothing: false, suggestions: [] }
   if (references.length === 0) return empty
 
-  const described = await describedKeywords(text, titles)
-  const askedForSomething = text.split(/[^\p{L}\p{N}]+/u).length > titles.length + 1
+  const { rest, words } = description(text, titles)
+  const described = await describedKeywords(rest, words)
 
   const referenceIds = new Set(references.map((r) => r.id))
   const votes = new Map<string, { movie: MovieResult; because: string[] }>()
-  const named = new Set<string>()
+  // Keyword -> the named films carrying it. A set would be enough to rank by, but not to
+  // explain: "dog" is John Wick's tag, and a film sharing it was being credited to
+  // whichever reference happened to list it first — Dawn of the Dead read "dog — like
+  // Никто", which is simply untrue.
+  const named = new Map<string, string[]>()
 
   for (const reference of references) {
     for (const kw of (await keywordsForMovie(reference.id)) ?? []) {
-      if (!NOT_ABOUT_THE_FILM.has(kw.name)) named.add(kw.name)
+      if (NOT_ABOUT_THE_FILM.has(kw.name)) continue
+      const carriers = named.get(kw.name)
+      if (carriers) carriers.push(reference.title)
+      else named.set(kw.name, [reference.title])
     }
     for (const movie of (await similarToTmdb(reference.id)) ?? []) {
       if (referenceIds.has(movie.id)) continue
@@ -253,9 +271,15 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
   const suggestions: Suggestion[] = await Promise.all(
     shortlist.map(async (entry) => {
       const kws = ((await keywordsForMovie(entry.movie.id)) ?? []).map((k) => k.name)
+      const shared = kws.filter((k) => named.has(k))
+      const shown = shared.slice(0, 3)
       return {
         ...entry,
-        shares: kws.filter((k) => named.has(k)),
+        shares: shown,
+        // Derived from the three that are shown, so the row never credits a film for a
+        // keyword the reader cannot see.
+        sharedWith: [...new Set(shown.flatMap((k) => named.get(k) ?? []))],
+        shareCount: shared.length,
         matches: kws.filter((k) => described.includes(k)),
       }
     }),
@@ -263,13 +287,16 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
 
   // What the person described is the most specific thing they said, so it outweighs both
   // the shared keywords and the similar lists that produced the shortlist.
-  const score = (s: Suggestion) => s.matches.length * 3 + s.shares.length + s.because.length
+  const score = (s: Suggestion) => s.matches.length * 3 + s.shareCount + s.because.length
   suggestions.sort((a, b) => score(b) - score(a))
 
   return {
     references,
     described,
-    describedNothing: askedForSomething && described.length === 0,
+    // Only when something was actually described. A request that is just a list of
+    // films has nothing left over, and telling that person the catalogue lacks a tag
+    // for what they described would be answering a question they did not ask.
+    describedNothing: words.length > 0 && described.length === 0,
     suggestions: suggestions.slice(0, 20),
   }
 }

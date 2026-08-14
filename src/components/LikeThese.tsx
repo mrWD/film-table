@@ -18,7 +18,7 @@ function list(items: string[]): string {
 function reason(s: Suggestion): string {
   const parts: string[] = []
   if (s.matches.length) parts.push(list(s.matches))
-  if (s.shares.length) parts.push(`${list(s.shares.slice(0, 3))} — like ${s.because[0]}`)
+  if (s.shares.length) parts.push(`${list(s.shares)} — like ${list(s.sharedWith)}`)
   if (parts.length === 0) parts.push(`you named ${list(s.because)}`)
   return parts.join(' · ')
 }
