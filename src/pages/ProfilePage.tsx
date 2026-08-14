@@ -9,6 +9,7 @@ import { useStats } from '../store/stats'
 import { COUNTRIES, useRegion } from '../store/region'
 import { YearReview } from '../components/YearReview'
 import { AutoBackup } from '../components/AutoBackup'
+import { ImportList } from '../components/ImportList'
 import { SupportLinks } from '../components/Support'
 import { Feedback } from '../components/Feedback'
 import { exportJsonFile, isNativeApp } from 'tables-core'
@@ -239,6 +240,10 @@ export default function ProfilePage() {
           </p>
         </section>
       )}
+
+      <section>
+        <ImportList />
+      </section>
 
       <section>
         <h2 className="h2">Data</h2>
