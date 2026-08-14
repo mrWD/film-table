@@ -113,6 +113,32 @@ export async function searchMoviesTmdb(query: string): Promise<MovieResult[] | n
     .slice(0, 20)
 }
 
+/**
+ * TMDB's own "people who liked this" lists. Both endpoints are asked because they
+ * disagree usefully: `recommendations` leans on what audiences actually watched next,
+ * `similar` on shared genres and keywords, and a film both of them name is a stronger
+ * answer than one either names alone.
+ */
+export async function similarToTmdb(id: string): Promise<MovieResult[] | null> {
+  const numeric = id.replace(/^tmdb:/, '')
+  const pages = await Promise.all([
+    tmdbGet<{ results?: TmdbMovie[] }>(`movie/${numeric}/recommendations`),
+    tmdbGet<{ results?: TmdbMovie[] }>(`movie/${numeric}/similar`),
+  ])
+  if (pages.every((p) => p === null)) return null
+  const seen = new Set<string>()
+  const out: MovieResult[] = []
+  for (const page of pages) {
+    for (const raw of page?.results ?? []) {
+      const movie = mapMovie(raw)
+      if (!movie || seen.has(movie.id)) continue
+      seen.add(movie.id)
+      out.push(movie)
+    }
+  }
+  return out.slice(0, 40)
+}
+
 export async function lookupMovieTmdb(id: string): Promise<MovieResult | null> {
   const numeric = id.replace(/^tmdb:/, '')
   const data = await tmdbGet<TmdbMovie>(`movie/${numeric}`)

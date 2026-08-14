@@ -8,6 +8,7 @@ import { Poster, SkeletonRows } from '../components/ui'
 import { useRecommend } from '../store/recommend'
 import { IconSearch, IconTv, IconX } from '../components/Icons'
 import { yearOf } from '../lib/format'
+import { LikeThese } from '../components/LikeThese'
 
 const STRIP_COLORS = ['strip-beige', 'strip-blue', 'strip-pink', 'strip-green']
 
@@ -185,6 +186,7 @@ function Discover({
 }) {
   return (
     <>
+      <LikeThese />
       <ForYou />
       {comingSoon.length > 0 && (
         <section>
