@@ -4,6 +4,7 @@ import { useLibrary } from '../store/library'
 import { useShowCache } from '../store/cache'
 import { buildYearReview, yearsWithActivity } from '../store/selectors'
 import { formatBigDuration } from '../lib/format'
+import { YearInWords } from './YearInWords'
 
 /**
  * A year of watching, added up on this device.
@@ -69,6 +70,8 @@ export function YearReview() {
           <span className="stat-label">MOVIE TIME</span>
         </div>
       </div>
+
+      <YearInWords review={review} />
 
       {peak > 0 && (
         <div className="months" aria-label="Episodes and movies watched per month">
