@@ -100,17 +100,65 @@ function mapMovie(m: TmdbMovie): MovieResult | null {
   }
 }
 
-/** null = proxy unavailable (caller should fall back); [] = genuinely no hits. */
-export async function searchMoviesTmdb(query: string): Promise<MovieResult[] | null> {
+/**
+ * null = proxy unavailable (caller should fall back); [] = genuinely no hits.
+ *
+ * `language` matters more than it looks. Searching "Никто" with the default language
+ * returns an undated fragment ahead of the 2021 film; with `ru-RU` the right one comes
+ * first. Callers that know the script of the query should say so.
+ */
+export async function searchMoviesTmdb(
+  query: string,
+  language?: string,
+): Promise<MovieResult[] | null> {
   const data = await tmdbGet<{ results?: TmdbMovie[] }>('search/movie', {
     query,
     include_adult: 'false',
+    ...(language ? { language } : {}),
   })
   if (!data) return null
   return (data.results ?? [])
     .map(mapMovie)
     .filter((m): m is MovieResult => m !== null)
     .slice(0, 20)
+}
+
+// ---------- keywords ----------
+
+export interface Keyword {
+  id: number
+  name: string
+}
+
+/** TMDB's own tags for a film: "hitman", "revenge", "one man army". */
+export async function keywordsForMovie(id: string): Promise<Keyword[] | null> {
+  const numeric = id.replace(/^tmdb:/, '')
+  const data = await tmdbGet<{ keywords?: Keyword[] }>(`movie/${numeric}/keywords`)
+  return data?.keywords ?? null
+}
+
+/**
+ * A phrase looked up in TMDB's keyword vocabulary, with the size of the corpus behind it.
+ *
+ * The size is the point. "corridor" is a real keyword and carries three films; "hallway"
+ * carries three. Treating either as a filter produces three arbitrary answers that look
+ * like a considered result. "hand to hand combat" carries 68, "one man army" 93,
+ * "martial arts" 2065 — those mean something. So a match has to clear a floor before it
+ * is allowed to influence anything.
+ */
+const KEYWORD_CORPUS_FLOOR = 25
+
+export async function findKeyword(term: string): Promise<(Keyword & { films: number }) | null> {
+  const found = await tmdbGet<{ results?: Keyword[] }>('search/keyword', { query: term })
+  // Only an exact vocabulary entry: searching "fight" also offers "food fight" and
+  // "brazilian fight", which are not what was asked and would quietly redirect the answer.
+  const exact = (found?.results ?? []).find((k) => k.name.toLowerCase() === term.toLowerCase())
+  if (!exact) return null
+  const corpus = await tmdbGet<{ total_results?: number }>('discover/movie', {
+    with_keywords: String(exact.id),
+  })
+  const films = corpus?.total_results ?? 0
+  return films >= KEYWORD_CORPUS_FLOOR ? { ...exact, films } : null
 }
 
 /**

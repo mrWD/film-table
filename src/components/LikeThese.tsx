@@ -2,6 +2,27 @@ import { useState } from 'react'
 import { findLikeThese, type Suggestion } from '../lib/like-these'
 import { MovieResultRow } from './cards'
 
+/** Names, joined the way a person would say them. */
+function list(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? ''
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+}
+
+/**
+ * Why this film is here, in TMDB's own words rather than a model's.
+ *
+ * Shared keywords come first when there are any, because "hitman, revenge, dog" is
+ * something a person can agree or disagree with, while "you named John Wick" only says
+ * the machinery ran.
+ */
+function reason(s: Suggestion): string {
+  const parts: string[] = []
+  if (s.matches.length) parts.push(list(s.matches))
+  if (s.shares.length) parts.push(`${list(s.shares.slice(0, 3))} — like ${s.because[0]}`)
+  if (parts.length === 0) parts.push(`you named ${list(s.because)}`)
+  return parts.join(' · ')
+}
+
 /**
  * "Something like John Wick, Nobody or Monkey Man."
  *
@@ -13,15 +34,12 @@ import { MovieResultRow } from './cards'
 export function LikeThese() {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
-  const [references, setReferences] = useState<string[] | null>(null)
-  const [results, setResults] = useState<Suggestion[] | null>(null)
+  const [found, setFound] = useState<Awaited<ReturnType<typeof findLikeThese>> | null>(null)
 
   const run = async () => {
     setBusy(true)
     try {
-      const found = await findLikeThese(text)
-      setReferences(found.references.map((r) => r.title))
-      setResults(found.suggestions)
+      setFound(await findLikeThese(text))
     } finally {
       setBusy(false)
     }
@@ -31,8 +49,9 @@ export function LikeThese() {
     <section>
       <h2 className="h2">Something like…</h2>
       <p className="chips-hint">
-        Name a few films you have in mind. This answers “like those”, using the
-        catalogue's own similarity — it cannot pick out one particular scene.
+        Name a few films you have in mind, and say what you are after. The suggestions
+        come from the catalogue's own data — films it links to yours, and the tags they
+        share.
       </p>
       <input
         className="regionselect"
@@ -47,28 +66,32 @@ export function LikeThese() {
         {busy ? 'Looking…' : 'Find something like these'}
       </button>
 
-      {references !== null && references.length === 0 && (
+      {found && found.references.length === 0 && (
         <p className="hint">
           No titles found in that. Name at least one film — the suggestions are built
           from films you point at.
         </p>
       )}
 
-      {references !== null && references.length > 0 && (
-        <p className="chips-hint">Matched: {references.join(', ')}</p>
+      {found && found.references.length > 0 && (
+        <>
+          <p className="chips-hint">Matched: {found.references.map((r) => r.title).join(', ')}</p>
+          {found.described.length > 0 && (
+            <p className="chips-hint">Looking for: {list(found.described)}</p>
+          )}
+          {/* Said plainly rather than swallowed: someone who asked for corridor fights
+              should know the catalogue has no such tag, not wonder why it was ignored. */}
+          {found.describedNothing && (
+            <p className="chips-hint">
+              The catalogue has no tag for the rest of what you described, so these are
+              films like the ones you named.
+            </p>
+          )}
+        </>
       )}
 
-      {results?.map((s) => (
-        <MovieResultRow
-          key={s.movie.id}
-          result={s.movie}
-          typeTag
-          reason={`Because you named ${
-            s.because.length > 1
-              ? `${s.because.slice(0, -1).join(', ')} and ${s.because[s.because.length - 1]}`
-              : s.because[0]
-          }`}
-        />
+      {found?.suggestions.map((s) => (
+        <MovieResultRow key={s.movie.id} result={s.movie} typeTag reason={reason(s)} />
       ))}
     </section>
   )

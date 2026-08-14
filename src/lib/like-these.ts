@@ -1,4 +1,4 @@
-import { searchMoviesTmdb, similarToTmdb } from './tmdb'
+import { findKeyword, keywordsForMovie, searchMoviesTmdb, similarToTmdb } from './tmdb'
 import { aiAvailable, summarise } from './ai'
 import type { MovieResult } from './types'
 
@@ -10,40 +10,117 @@ import type { MovieResult } from './types'
  * has opinions about cinema the way a stranger in a pub does, and no way to tell you
  * which ones it made up.
  *
- * So the work is split at its natural seam. The model reads the sentence and pulls out
- * the titles the person actually named, which is reading, not recall — the same job it
- * does well for pasted lists. Everything after that is TMDB: each title is looked up,
- * its recommendations and similar films are fetched, and the results are ranked by how
- * many of the named films point at them. Nothing reaches the screen that TMDB did not
- * return.
+ * So the work is split at its natural seam. The sentence is read for the titles the
+ * person actually named — reading, not recall — and everything after that is TMDB: the
+ * named films' recommendations, their similar lists, and their keywords. Nothing reaches
+ * the screen that TMDB did not return, and every reason shown is computed from its data
+ * rather than phrased by a model.
  *
- * The honest limit, worth saying out loud in the UI: this answers "like those films",
- * not "with that specific thing in them". TMDB's similarity is built from genres and
- * keywords, so "corridor fights" narrows nothing — the three films named do.
+ * Two things were measured before this was written, and both changed the design.
+ *
+ * The keywords shared by the named films are a better ranking signal than the similar
+ * lists alone. Asked for John Wick, Nobody and Monkey Man, the similar lists put Running
+ * Scared and Dawn of the Dead near the top; adding keyword overlap lifts John Wick:
+ * Chapter 2 (assassin, hitman, secret organization, revenge, dog) and Code of Silence
+ * (hitman, gangster, revenge) above them, and says why in words a person can check.
+ *
+ * The description itself mostly cannot be used, and pretending otherwise is worse than
+ * admitting it. "corridor fights" is not a thing TMDB tracks: "corridor" exists in its
+ * vocabulary and carries three films, "hallway" three. Used as a filter, either would
+ * return three arbitrary films with total confidence. So a description only counts when
+ * it lands on a keyword with a real corpus behind it — "martial arts", "one man army",
+ * "heist" — and when it does not, the UI says so instead of quietly ignoring it.
  */
 
 export interface Suggestion {
   movie: MovieResult
   /** Which of the named films pointed here — computed, never phrased by the model. */
   because: string[]
+  /** Keywords this film shares with the ones that were named. */
+  shares: string[]
+  /** Keywords from the description itself, when the description landed on real ones. */
+  matches: string[]
 }
 
-const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+export interface LikeTheseResult {
+  references: MovieResult[]
+  /** Description words that turned out to be real, well-populated TMDB keywords. */
+  described: string[]
+  /** The person described something, and none of it exists in TMDB's vocabulary. */
+  describedNothing: boolean
+  suggestions: Suggestion[]
+}
+
+const normalise = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
 
 /** Enough references to triangulate; more is a paragraph, not a request. */
 const MAX_REFERENCES = 4
 
 /**
- * Titles are usually capitalised or quoted, which carries most requests on its own —
- * so the model is only asked when that finds nothing, and never for the answer itself.
+ * Fetching a keyword list per candidate is one request each, so the tail is cut. They are
+ * week-cached at the edge and issued together, which keeps a button press to about a
+ * second after the first person asks.
  */
+const MAX_SCORED = 24
+
+/**
+ * Words that open a request rather than name a film. Without these, "Хочу фильм…" and
+ * "Looking for something…" are read as titles, and TMDB — which will find a film for
+ * almost any string — obliges.
+ */
+const NOT_A_TITLE = new Set([
+  'хочу', 'ищу', 'посоветуй', 'найди', 'что', 'фильм', 'фильме', 'фильмы', 'сериал',
+  'сериалы', 'посмотреть', 'как', 'или', 'типа', 'вроде', 'want', 'looking', 'find',
+  'something', 'anything', 'show', 'shows', 'movie', 'movies', 'film', 'films', 'like',
+  'similar', 'or', 'and', 'the', 'a', 'an', 'i', 'me', 'give', 'recommend',
+])
+
+/**
+ * Tags about how a film was made or released rather than what is in it. Left in, they
+ * invent kinship: Dawn of the Dead ranked among the John Wick answers on the strength of
+ * sharing "duringcreditsstinger".
+ */
+const NOT_ABOUT_THE_FILM = new Set([
+  'duringcreditsstinger', 'aftercreditsstinger', 'woman director', 'imax', '3d',
+  'live action remake', 'remake', 'sequel', 'reboot',
+])
+
+const hasCyrillic = (s: string) => /[Ѐ-ӿ]/.test(s)
+
+/** Longest first, so "ами" is tried before "и". */
+const RU_ENDINGS = ['ами', 'ями', 'ом', 'ем', 'ой', 'ей', 'ах', 'ях', 'ов', 'ев',
+  'а', 'у', 'е', 'и', 'ы', 'ю', 'я', 'о']
+
+/**
+ * Russian declines titles inside a sentence: someone asking for a film "как в Джон Вике"
+ * has written a form TMDB does not know — the search returns nothing at all for it, while
+ * "Джон Вик" finds the film. Trimming one case ending off the last word recovers it.
+ */
+function variants(title: string): string[] {
+  if (!hasCyrillic(title)) return [title]
+  const words = title.split(/\s+/)
+  const last = words[words.length - 1]
+  for (const ending of RU_ENDINGS) {
+    if (last.length > ending.length + 2 && last.toLowerCase().endsWith(ending)) {
+      return [title, [...words.slice(0, -1), last.slice(0, -ending.length)].join(' ')]
+    }
+  }
+  return [title]
+}
+
+/**
+ * Titles are usually capitalised or quoted, which carries most requests on its own — so
+ * the model is only asked when that finds nothing, and never for the answer itself.
+ */
+const CAPITALISED = /[A-ZА-ЯЁ][\p{L}\p{N}'’-]*(?:\s+[A-ZА-ЯЁ][\p{L}\p{N}'’-]*){0,3}/gu
+
 function guessTitles(text: string): string[] {
-  const quoted = [...text.matchAll(/["«"']([^"»"']{2,60})["»"']/g)].map((m) => m[1].trim())
+  const quoted = [...text.matchAll(/["«“']([^"»”']{2,60})["»”']/g)].map((m) => m[1].trim())
   if (quoted.length) return quoted.slice(0, MAX_REFERENCES)
-  const capitalised = [...text.matchAll(/\b([A-Z][\w'-]*(?:\s+[A-Z][\w'-]*){0,3})/g)]
-    .map((m) => m[1].trim())
-    .filter((t) => t.length > 2)
-  return capitalised.slice(0, MAX_REFERENCES)
+  return [...text.matchAll(CAPITALISED)]
+    .map((m) => m[0].trim())
+    .filter((t) => t.length > 2 && !NOT_A_TITLE.has(t.toLowerCase()))
+    .slice(0, MAX_REFERENCES)
 }
 
 async function extractTitles(text: string): Promise<string[]> {
@@ -62,32 +139,102 @@ async function extractTitles(text: string): Promise<string[]> {
     .slice(0, MAX_REFERENCES)
 }
 
-export interface LikeTheseResult {
-  references: MovieResult[]
-  suggestions: Suggestion[]
+/**
+ * A guessed title turned into the film it names, or nothing.
+ *
+ * The two scripts need different proof, because they go wrong differently. A Latin guess
+ * is checked by prefix: a phone capitalises the first word, so "Corridor fights like John
+ * Wick" offers "Corridor" as a title and TMDB returns a film called "Safe Corridor" —
+ * requiring the result to begin with what was asked for drops that and keeps "Nobody".
+ * A Cyrillic guess cannot be checked that way at all, since TMDB matches it through
+ * alternative titles and answers in another spelling entirely ("Джон Вик" finds "Джон
+ * Уик"). There the guard is a release date: the junk that outranks the real "Никто" is an
+ * undated fragment, and the 2021 film is the first dated hit.
+ */
+async function resolve(title: string): Promise<MovieResult | null> {
+  const cyrillic = hasCyrillic(title)
+  for (const query of variants(title)) {
+    // Russian titles rank correctly only when the search is told the language.
+    for (const language of cyrillic ? ['ru-RU', undefined] : [undefined]) {
+      const hits = await searchMoviesTmdb(query, language)
+      const best = (hits ?? []).find((m) => m.releaseDate)
+      if (!best) continue
+      if (cyrillic || normalise(best.title).startsWith(normalise(query))) return best
+    }
+  }
+  return null
+}
+
+/**
+ * The part of the request that is not a title, turned into TMDB keywords — only the ones
+ * that exist and carry enough films to mean anything.
+ */
+async function describedKeywords(text: string, titles: string[]): Promise<string[]> {
+  let rest = text
+  for (const t of titles) rest = rest.replace(t, ' ')
+  const words = rest
+    .split(/[^\p{L}\p{N}]+/u)
+    .map((w) => w.toLowerCase())
+    .filter((w) => w.length > 2 && !NOT_A_TITLE.has(w))
+  if (words.length === 0) return []
+
+  // Pairs first: "martial arts" is a keyword, "martial" on its own is not. Plurals are
+  // tried singular because the vocabulary is written in the singular ("gunfight").
+  const terms: string[] = []
+  for (let i = 0; i < words.length - 1; i++) terms.push(`${words[i]} ${words[i + 1]}`)
+  for (const w of words) terms.push(w)
+  for (const w of words) if (w.endsWith('s')) terms.push(w.slice(0, -1))
+
+  const found = new Set<string>()
+  for (const term of [...new Set(terms)].slice(0, 8)) {
+    const kw = await findKeyword(term)
+    if (kw) found.add(kw.name)
+    if (found.size >= 3) break
+  }
+  if (found.size > 0) return [...found]
+
+  // Nothing matched, which for a request written in Russian is expected — the vocabulary
+  // is English. The model is asked to render the description in English, and whatever it
+  // says is looked up like anything else: an invented phrase simply is not in the
+  // vocabulary, so it changes nothing.
+  if (!(await aiAvailable())) return []
+  const english = await summarise(
+    rest,
+    'Describe this in at most three short English phrases, one per line, of the kind ' +
+      'used to tag films — for example "martial arts", "time travel", "heist". No ' +
+      'other text.',
+  )
+  for (const line of (english ?? '').split(/\n+/).slice(0, 3)) {
+    const term = line.replace(/^[-*\d.)\s]+/, '').trim().toLowerCase()
+    if (term.length < 3 || term.length > 40) continue
+    const kw = await findKeyword(term)
+    if (kw) found.add(kw.name)
+  }
+  return [...found]
 }
 
 export async function findLikeThese(text: string): Promise<LikeTheseResult> {
   const titles = await extractTitles(text)
   const references: MovieResult[] = []
   for (const title of titles) {
-    const hits = await searchMoviesTmdb(title)
-    const best = hits?.[0]
-    // The match has to begin with what was asked for. Typed on a phone, "corridor
-    // fights like John Wick" arrives with a capital C, the guesser reads "Corridor" as
-    // a title, and TMDB helpfully returns a film called "Safe Corridor" — which then
-    // appears in the list of things the person supposedly named. Requiring the title to
-    // start with the query keeps "Nobody" and drops that.
-    if (best && normalise(best.title).startsWith(normalise(title))) references.push(best)
+    const found = await resolve(title)
+    if (found && !references.some((r) => r.id === found.id)) references.push(found)
   }
-  if (references.length === 0) return { references: [], suggestions: [] }
+  const empty = { references: [], described: [], describedNothing: false, suggestions: [] }
+  if (references.length === 0) return empty
+
+  const described = await describedKeywords(text, titles)
+  const askedForSomething = text.split(/[^\p{L}\p{N}]+/u).length > titles.length + 1
 
   const referenceIds = new Set(references.map((r) => r.id))
   const votes = new Map<string, { movie: MovieResult; because: string[] }>()
+  const named = new Set<string>()
 
   for (const reference of references) {
-    const similar = await similarToTmdb(reference.id)
-    for (const movie of similar ?? []) {
+    for (const kw of (await keywordsForMovie(reference.id)) ?? []) {
+      if (!NOT_ABOUT_THE_FILM.has(kw.name)) named.add(kw.name)
+    }
+    for (const movie of (await similarToTmdb(reference.id)) ?? []) {
       if (referenceIds.has(movie.id)) continue
       const seen = votes.get(movie.id)
       if (seen) {
@@ -98,11 +245,31 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
     }
   }
 
-  // Agreement first: a film three of the named ones point at is a better answer than
-  // one that only appeared beside a single reference.
-  const suggestions = [...votes.values()]
+  // Agreement narrows the field; keywords then decide the order within it.
+  const shortlist = [...votes.values()]
     .sort((a, b) => b.because.length - a.because.length)
-    .slice(0, 20)
+    .slice(0, MAX_SCORED)
 
-  return { references, suggestions }
+  const suggestions: Suggestion[] = await Promise.all(
+    shortlist.map(async (entry) => {
+      const kws = ((await keywordsForMovie(entry.movie.id)) ?? []).map((k) => k.name)
+      return {
+        ...entry,
+        shares: kws.filter((k) => named.has(k)),
+        matches: kws.filter((k) => described.includes(k)),
+      }
+    }),
+  )
+
+  // What the person described is the most specific thing they said, so it outweighs both
+  // the shared keywords and the similar lists that produced the shortlist.
+  const score = (s: Suggestion) => s.matches.length * 3 + s.shares.length + s.because.length
+  suggestions.sort((a, b) => score(b) - score(a))
+
+  return {
+    references,
+    described,
+    describedNothing: askedForSomething && described.length === 0,
+    suggestions: suggestions.slice(0, 20),
+  }
 }
