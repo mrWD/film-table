@@ -122,9 +122,34 @@ function guessTitles(text: string): string[] {
   const quoted = [...text.matchAll(/["«“']([^"»”']{2,60})["»”']/g)].map((m) => m[1].trim())
   if (quoted.length) return quoted.slice(0, MAX_REFERENCES)
   return [...text.matchAll(CAPITALISED)]
+    .filter((m) => opensARequest(text, m) === false)
     .map((m) => m[0].trim())
     .filter((t) => t.length > 2 && !NOT_A_TITLE.has(t.toLowerCase()))
     .slice(0, MAX_REFERENCES)
+}
+
+/**
+ * Is this capitalised run just the start of a sentence?
+ *
+ * A phone capitalises the first word of everything typed into it. "martial arts like The
+ * Raid" arrives as "Martial arts like The Raid", the run "Martial" reads as a title, and
+ * TMDB answers with Martial Law — after which the whole page is Lethal Weapon sequels.
+ * The same trap caught "Corridor" earlier and got a weaker fix.
+ *
+ * What separates the two cases is the word after. A request that opens with a title
+ * continues with a separator — "John Wick or Nobody", "The Raid and Ip Man" — or ends.
+ * A request that opens with a sentence continues with an ordinary word: "arts", "fights".
+ * Only the run at the very beginning is judged this way; anywhere else, a capital letter
+ * means something.
+ */
+function opensARequest(text: string, match: RegExpMatchArray): boolean {
+  if ((match.index ?? 0) > text.length - text.trimStart().length) return false
+  const after = text.slice((match.index ?? 0) + match[0].length).trim()
+  if (after.length === 0) return false
+  const next = after.split(/[^\p{L}\p{N}]+/u).filter(Boolean)[0]
+  // A comma or "or" after the run means it was an item in a list, not an opening phrase.
+  if (!next || !/^\p{Ll}/u.test(next)) return false
+  return !NOT_A_TITLE.has(next.toLowerCase())
 }
 
 async function extractTitles(text: string): Promise<string[]> {
