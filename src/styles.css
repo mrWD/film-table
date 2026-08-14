@@ -1961,3 +1961,11 @@ img {
   color: var(--ink3);
   margin-top: 4px;
 }
+
+/* The recap is a paragraph to read, not a label: it gets line height and a little air. */
+.recap {
+  margin: 8px 0 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import type { Episode, ShowSummary } from '../lib/types'
 import { ensureShow, useShowCache } from '../store/cache'
+import { Recap } from '../components/Recap'
 import { useLibrary } from '../store/library'
 import { useUi } from '../store/ui'
 import { buildWatchItem, epDate, isAired } from '../store/selectors'
@@ -219,6 +220,8 @@ export default function ShowDetailPage() {
         )}
 
         <WhereToWatch imdbId={show.imdbId} />
+
+        {tracked && entry && <Recap tracked={tracked} entry={entry} />}
 
         <h2 className="h2">Episodes</h2>
         {loadingEpisodes && (
