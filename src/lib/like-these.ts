@@ -4,6 +4,7 @@ import {
   keywordsForMovie,
   searchMoviesTmdb,
   similarToTmdb,
+  type Keyword,
 } from './tmdb'
 import { aiAvailable, summarise } from './ai'
 import type { MovieResult } from './types'
@@ -248,7 +249,7 @@ function description(text: string, titles: string[]): { rest: string; words: str
  * The part of the request that is not a title, turned into TMDB keywords — only the ones
  * that exist and carry enough films to mean anything.
  */
-async function describedKeywords(rest: string, words: string[]): Promise<string[]> {
+async function describedKeywords(rest: string, words: string[]): Promise<Keyword[]> {
   if (words.length === 0) return []
 
   // Pairs first: "martial arts" is a keyword, "martial" on its own is not. Plurals are
@@ -258,36 +259,46 @@ async function describedKeywords(rest: string, words: string[]): Promise<string[
   for (const w of words) terms.push(w)
   for (const w of words) if (w.endsWith('s')) terms.push(w.slice(0, -1))
 
-  const found = new Set<string>()
+  const found: Keyword[] = []
   for (const term of [...new Set(terms)].slice(0, 8)) {
     // "martial arts" is looked up before "arts" and "art", and all three are real
     // vocabulary entries — keeping the fragments makes the app announce it is looking
     // for "martial arts, arts and art", which is one thing said three times.
-    if ([...found].some((k) => k.includes(term))) continue
+    if (found.some((k) => k.name.includes(term))) continue
     const kw = await findKeyword(term)
-    if (kw) found.add(kw.name)
-    if (found.size >= 3) break
+    if (kw && !found.some((k) => k.id === kw.id)) found.push({ id: kw.id, name: kw.name })
+    if (found.length >= 3) break
   }
-  if (found.size > 0) return [...found]
+  if (found.length > 0) return found
 
-  // Nothing matched, which for a request written in Russian is expected — the vocabulary
-  // is English. The model is asked to render the description in English, and whatever it
-  // says is looked up like anything else: an invented phrase simply is not in the
-  // vocabulary, so it changes nothing.
+  /*
+   * Nothing matched, which for a request written in Russian is expected: the vocabulary
+   * is English. Translation is the one thing the model does reliably here — "боевые
+   * искусства" comes back as "martial arts" every time, "ограбление банка" as "heist".
+   * It is also wrong often: "подводная лодка" became "Underwater adventure" when the tag
+   * is "submarine". That costs nothing, because whatever it says is looked up like any
+   * other word and a phrase TMDB does not have simply finds nothing.
+   *
+   * Asking it for more than translation was tried and abandoned. Given the tags these
+   * films actually carry and asked which fit "corridor fights", it picked nothing in 18
+   * runs out of 18, and on an easier phrasing answered "thief, bratva (russian mafia)".
+   * An earlier version of that test looked promising only because the list I handed it
+   * was one I had written myself, with the obvious answers already in it.
+   */
   if (!(await aiAvailable())) return []
   const english = await summarise(
     rest,
-    'Describe this in at most three short English phrases, one per line, of the kind ' +
-      'used to tag films — for example "martial arts", "time travel", "heist". No ' +
-      'other text.',
+    'Translate what the person wants to watch into at most two short English film tags, ' +
+      'one per line — like "heist", "time travel", "martial arts". Nothing else.',
   )
-  for (const line of (english ?? '').split(/\n+/).slice(0, 3)) {
-    const term = line.replace(/^[-*\d.)\s]+/, '').trim().toLowerCase()
+  for (const line of (english ?? '').split(/\n+/).slice(0, 2)) {
+    // It ends sentences: "Zombie apocalypse." is the right tag with a full stop attached.
+    const term = line.replace(/^[-*\d.)\s]+/, '').replace(/[.!?,;:]+$/, '').trim()
     if (term.length < 3 || term.length > 40) continue
     const kw = await findKeyword(term)
-    if (kw) found.add(kw.name)
+    if (kw && !found.some((k) => k.id === kw.id)) found.push({ id: kw.id, name: kw.name })
   }
-  return [...found]
+  return found
 }
 
 export async function findLikeThese(text: string): Promise<LikeTheseResult> {
@@ -337,22 +348,37 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
   const withKeywords = await Promise.all(
     shortlist.map(async (entry) => ({
       entry,
-      shared: ((await keywordsForMovie(entry.movie.id)) ?? [])
-        .map((k) => k.name)
-        .filter((k) => named.has(k) || described.includes(k)),
+      kws: (await keywordsForMovie(entry.movie.id)) ?? [],
     })),
   )
 
-  const weights = await rarity(
-    [...new Set(withKeywords.flatMap((c) => c.shared))]
-      .map((name) => named.get(name))
-      .filter((k): k is { id: number; refs: string[] } => k !== undefined)
-      .map((k) => k.id),
-  )
-  const weigh = (name: string) => weights.get(named.get(name)?.id ?? -1) ?? 1
+  // Every tag in play, and how many of the shortlisted films wear it. This is both the
+  // list the model chooses from and the source of ids for pricing.
+  const inPlay = new Map<string, { id: number; count: number }>()
+  for (const [name, { id }] of named) inPlay.set(name, { id, count: Infinity })
+  for (const { kws } of withKeywords) {
+    for (const kw of kws) {
+      if (NOT_ABOUT_THE_FILM.has(kw.name)) continue
+      const seen = inPlay.get(kw.name)
+      if (seen) seen.count += 1
+      else inPlay.set(kw.name, { id: kw.id, count: 1 })
+    }
+  }
 
-  const suggestions: Suggestion[] = withKeywords.map(({ entry, shared }) => {
-    const mine = shared.filter((k) => named.has(k))
+  for (const k of described) if (!inPlay.has(k.name)) inPlay.set(k.name, { id: k.id, count: 0 })
+
+  const describedNames = described.map((k) => k.name)
+  const weights = await rarity([
+    ...new Set([
+      ...withKeywords.flatMap(({ kws }) => kws.filter((k) => inPlay.has(k.name)).map((k) => k.id)),
+      ...described.map((k) => k.id),
+    ]),
+  ])
+  const weigh = (name: string) => weights.get(inPlay.get(name)?.id ?? -1) ?? 1
+
+  const suggestions: Suggestion[] = withKeywords.map(({ entry, kws }) => {
+    const names = kws.map((k) => k.name)
+    const mine = names.filter((k) => named.has(k))
     // Rarest first, so the line shows what actually distinguishes this film rather than
     // whichever tag TMDB happened to list first.
     const shown = [...mine].sort((a, b) => weigh(b) - weigh(a)).slice(0, 3)
@@ -363,18 +389,20 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
       // keyword the reader cannot see.
       sharedWith: [...new Set(shown.flatMap((k) => named.get(k)?.refs ?? []))],
       shareCount: mine.reduce((sum, k) => sum + weigh(k), 0),
-      matches: shared.filter((k) => described.includes(k)),
+      matches: names.filter((k) => describedNames.includes(k)),
     }
   })
 
-  // What the person described is the most specific thing they said, so it outweighs both
-  // the shared keywords and the similar lists that produced the shortlist.
-  const score = (s: Suggestion) => s.matches.length * 3 + s.shareCount + s.because.length
+  // What the person described is the most specific thing they said, so it counts three
+  // times over — but still by rarity, because the model pads its picks and a generic one
+  // like "assassin" should not carry the same force as "brawl".
+  const score = (s: Suggestion) =>
+    s.matches.reduce((sum, k) => sum + 3 * weigh(k), 0) + s.shareCount + s.because.length
   suggestions.sort((a, b) => score(b) - score(a))
 
   return {
     references,
-    described,
+    described: describedNames,
     // Only when something was actually described. A request that is just a list of
     // films has nothing left over, and telling that person the catalogue lacks a tag
     // for what they described would be answering a question they did not ask.
