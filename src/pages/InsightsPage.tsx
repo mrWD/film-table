@@ -6,6 +6,39 @@ import { useShowCache } from '../store/cache'
 import { buildStats } from '../store/selectors'
 import { formatBigDuration, formatDateShort } from '../lib/format'
 import { useUi } from '../store/ui'
+import { aiAvailable } from '../lib/ai'
+import { translateAvailability, type TranslateStatus } from '../lib/translate'
+
+/**
+ * What the phone itself can do, which is otherwise invisible.
+ *
+ * Both of these decide whether a feature appears at all, and when one says no the app
+ * simply shows nothing — correct behaviour, and indistinguishable from a bug. Worth a
+ * line on the page that already exists for questions like this. It also settled a real
+ * one: the simulator reports Russian unsupported while the same Mac reports it supported,
+ * so the phone is the only place the answer can be read.
+ */
+function OnDeviceStatus() {
+  const [model, setModel] = useState<boolean | null>(null)
+  const [translation, setTranslation] = useState<TranslateStatus | null>(null)
+
+  useEffect(() => {
+    void aiAvailable().then(setModel)
+    void translateAvailability().then(setTranslation)
+  }, [])
+
+  if (model === null && translation === null) return null
+  return (
+    <>
+      <h2 className="h2">On this device</h2>
+      <p className="chips-hint">
+        Writing model: {model === null ? '…' : model ? 'available' : 'not available'}
+        {' · '}
+        Translation: {translation ?? '…'}
+      </p>
+    </>
+  )
+}
 import { isPersisted } from '../lib/durability'
 import { IconBack } from '../components/Icons'
 
@@ -158,6 +191,8 @@ export default function InsightsPage() {
         Counted on this device only. No search terms, no titles, no identifiers — nothing is
         sent anywhere.
       </p>
+
+      <OnDeviceStatus />
 
       <h2 className="h2">Usage</h2>
       <div className="stats">

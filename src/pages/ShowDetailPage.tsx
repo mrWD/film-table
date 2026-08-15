@@ -1,3 +1,4 @@
+import { Translated } from '../components/Translated'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import type { Episode, ShowSummary } from '../lib/types'
@@ -214,9 +215,11 @@ export default function ShowDetailPage() {
         )}
 
         {show.summary && (
-          <p className={`detail-about${expandAbout ? ' open' : ''}`} onClick={() => setExpandAbout(!expandAbout)}>
-            {show.summary}
-          </p>
+          <Translated
+            text={show.summary}
+            className={`detail-about${expandAbout ? ' open' : ''}`}
+            onClick={() => setExpandAbout(!expandAbout)}
+          />
         )}
 
         <WhereToWatch imdbId={show.imdbId} />

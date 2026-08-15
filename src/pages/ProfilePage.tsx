@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { buildBackup, isValidBackup, useLibrary } from '../store/library'
 import { useShowCache } from '../store/cache'
 import { useUi } from '../store/ui'
@@ -53,6 +53,8 @@ export default function ProfilePage() {
   const alertsOn = useReminders((s) => s.enabled)
   const setAlertsOn = useReminders((s) => s.setEnabled)
   const fileRef = useRef<HTMLInputElement>(null)
+  const tapped = useRef(0)
+  const navigate = useNavigate()
 
   const stats = buildStats(shows, entries, movies)
 
@@ -323,7 +325,11 @@ export default function ProfilePage() {
         </p>
       </section>
 
-      <p className="attribution">
+      {/* Insights has always been reachable only by typing its address, which works in a
+          browser and nowhere else — inside the app there is no address bar, so the page
+          was unreachable on the phone. Five taps here, the usual way in, and still not
+          something anyone finds by accident. */}
+      <p className="attribution" onClick={() => tapped.current++ >= 4 && navigate('/insights')}>
         FilmTable · a free, fan-made, local-first tracker · not affiliated with TV Time or Whip
         Media
       </p>

@@ -1,3 +1,4 @@
+import { Translated } from '../components/Translated'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import type { MovieResult } from '../lib/types'
@@ -132,7 +133,7 @@ export default function MovieDetailPage() {
           )}
         </div>
 
-        {movie.description && <p className="detail-about open">{movie.description}</p>}
+        {movie.description && <Translated text={movie.description} className="detail-about open" />}
 
         <WhereToWatch movieId={movie.id} />
 
