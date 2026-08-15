@@ -62,7 +62,13 @@ export function LikeThese() {
           if (e.key === 'Enter') void run()
         }}
       />
-      <button className="textbtn" disabled={!text.trim() || busy} onClick={() => void run()}>
+      {/* A real button. As borrowed text styling it read as a caption under the field,
+          and the person it was built for did not know it could be pressed. */}
+      <button
+        className="btn accent asksubmit"
+        disabled={!text.trim() || busy}
+        onClick={() => void run()}
+      >
         {busy ? 'Looking…' : 'Find something like these'}
       </button>
 

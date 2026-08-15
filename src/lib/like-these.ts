@@ -106,10 +106,16 @@ const NOT_ABOUT_THE_FILM = new Set([
  * films both tagged "thief" is barely a fact about either, so the common tags are worth
  * a fraction of a rare one, and the horror film drops out of the answer.
  *
- * One request per keyword, which is why only the ones some candidate actually shares are
- * asked about. They are week-cached at the edge, and issued together.
+ * One request per keyword, so only the tags that can affect the ranking are priced: the
+ * ones the named films carry, plus anything the description matched. Nothing else can
+ * score, so nothing else is worth asking about. They are week-cached and issued together.
+ *
+ * The cap is a backstop, and it has bitten once: priced against every tag in play instead
+ * of the named films' own, the list ran to hundreds, the first two dozen were priced, and
+ * everything after them silently fell back to weight 1 — which is the unweighted ranking
+ * this was written to replace. It looked exactly like the change not being deployed.
  */
-const MAX_WEIGHED = 24
+const MAX_WEIGHED = 48
 
 async function rarity(ids: number[]): Promise<Map<number, number>> {
   const sized = await Promise.all(
@@ -369,10 +375,7 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
 
   const describedNames = described.map((k) => k.name)
   const weights = await rarity([
-    ...new Set([
-      ...withKeywords.flatMap(({ kws }) => kws.filter((k) => inPlay.has(k.name)).map((k) => k.id)),
-      ...described.map((k) => k.id),
-    ]),
+    ...new Set([...[...named.values()].map((v) => v.id), ...described.map((k) => k.id)]),
   ])
   const weigh = (name: string) => weights.get(inPlay.get(name)?.id ?? -1) ?? 1
 

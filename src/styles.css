@@ -1888,6 +1888,14 @@ input.regionselect {
   font-size: 16px;
 }
 
+.asksubmit {
+  margin-top: 10px;
+}
+
+.asksubmit:disabled {
+  opacity: 0.45;
+}
+
 .providers {
   display: flex;
   flex-direction: column;

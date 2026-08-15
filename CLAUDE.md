@@ -48,6 +48,12 @@ npm install
 npm run dev                       # :5173, without TMDB — runs on Cinemeta/iTunes
 npm run build && npm run preview  # :4173
 
+# for the store builds — use this before `npx cap sync`, never plain `build`.
+# It ships no service worker and destroys any already installed: inside the app
+# every file is local anyway, and the worker's only effect was to keep serving the
+# previous build after an update.
+npm run build:native
+
 # with TMDB: needs .env.local with TMDB_API_KEY (the file is in .gitignore)
 node --env-file=.env.local scripts/dev-api.mjs      # proxy on :3001
 VITE_API_BASE=http://localhost:3001 npx vite        # a frontend that knows about the proxy
