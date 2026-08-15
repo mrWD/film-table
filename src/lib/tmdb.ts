@@ -148,6 +148,14 @@ export async function keywordsForMovie(id: string): Promise<Keyword[] | null> {
  */
 const KEYWORD_CORPUS_FLOOR = 25
 
+/** How many films carry a keyword — which is how much it means that two of them do. */
+export async function keywordCorpusSize(id: number): Promise<number | null> {
+  const data = await tmdbGet<{ total_results?: number }>('discover/movie', {
+    with_keywords: String(id),
+  })
+  return data?.total_results ?? null
+}
+
 export async function findKeyword(term: string): Promise<(Keyword & { films: number }) | null> {
   const found = await tmdbGet<{ results?: Keyword[] }>('search/keyword', { query: term })
   // Only an exact vocabulary entry: searching "fight" also offers "food fight" and

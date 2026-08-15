@@ -1881,6 +1881,13 @@ img {
   font-size: 14px;
 }
 
+/* Safari zooms the page in on a focused field whose text is under 16px, and does not
+   zoom back out. The country picker above opens a wheel rather than a keyboard, so it
+   keeps its size; anything typed into has to be 16. */
+input.regionselect {
+  font-size: 16px;
+}
+
 .providers {
   display: flex;
   flex-direction: column;

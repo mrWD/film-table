@@ -1,4 +1,10 @@
-import { findKeyword, keywordsForMovie, searchMoviesTmdb, similarToTmdb } from './tmdb'
+import {
+  findKeyword,
+  keywordCorpusSize,
+  keywordsForMovie,
+  searchMoviesTmdb,
+  similarToTmdb,
+} from './tmdb'
 import { aiAvailable, summarise } from './ai'
 import type { MovieResult } from './types'
 
@@ -40,7 +46,7 @@ export interface Suggestion {
   shares: string[]
   /** Which named films those particular keywords came from. */
   sharedWith: string[]
-  /** How many were shared in all, which is what the ranking uses. */
+  /** Every shared keyword, weighted by how rare it is — what the ranking runs on. */
   shareCount: number
   /** Keywords from the description itself, when the description landed on real ones. */
   matches: string[]
@@ -88,6 +94,31 @@ const NOT_ABOUT_THE_FILM = new Set([
   'duringcreditsstinger', 'aftercreditsstinger', 'woman director', 'imax', '3d',
   'live action remake', 'remake', 'sequel', 'reboot',
 ])
+
+/**
+ * What a shared keyword is worth, given how many films wear it.
+ *
+ * Measured on "something with corridor fights like Nobody or Monkey Man", which put The
+ * Collector — a horror film about a burglar — second, on the strength of sharing "thief"
+ * and "home invasion" with Nobody. Those tags carry 419 and 352 films. "bratva (russian
+ * mafia)", which John Wick shares, carries 56; "underground fights" carries one. Two
+ * films both tagged "thief" is barely a fact about either, so the common tags are worth
+ * a fraction of a rare one, and the horror film drops out of the answer.
+ *
+ * One request per keyword, which is why only the ones some candidate actually shares are
+ * asked about. They are week-cached at the edge, and issued together.
+ */
+const MAX_WEIGHED = 24
+
+async function rarity(ids: number[]): Promise<Map<number, number>> {
+  const sized = await Promise.all(
+    ids.slice(0, MAX_WEIGHED).map(async (id) => [id, await keywordCorpusSize(id)] as const),
+  )
+  const out = new Map<number, number>()
+  // Capped, so "underground fights" (one film) does not outweigh everything else at once.
+  for (const [id, films] of sized) out.set(id, Math.min(3, 400 / Math.max(films ?? 400, 1)))
+  return out
+}
 
 const hasCyrillic = (s: string) => /[Ѐ-ӿ]/.test(s)
 
@@ -278,14 +309,14 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
   // explain: "dog" is John Wick's tag, and a film sharing it was being credited to
   // whichever reference happened to list it first — Dawn of the Dead read "dog — like
   // Никто", which is simply untrue.
-  const named = new Map<string, string[]>()
+  const named = new Map<string, { id: number; refs: string[] }>()
 
   for (const reference of references) {
     for (const kw of (await keywordsForMovie(reference.id)) ?? []) {
       if (NOT_ABOUT_THE_FILM.has(kw.name)) continue
-      const carriers = named.get(kw.name)
-      if (carriers) carriers.push(reference.title)
-      else named.set(kw.name, [reference.title])
+      const carrier = named.get(kw.name)
+      if (carrier) carrier.refs.push(reference.title)
+      else named.set(kw.name, { id: kw.id, refs: [reference.title] })
     }
     for (const movie of (await similarToTmdb(reference.id)) ?? []) {
       if (referenceIds.has(movie.id)) continue
@@ -303,22 +334,38 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
     .sort((a, b) => b.because.length - a.because.length)
     .slice(0, MAX_SCORED)
 
-  const suggestions: Suggestion[] = await Promise.all(
-    shortlist.map(async (entry) => {
-      const kws = ((await keywordsForMovie(entry.movie.id)) ?? []).map((k) => k.name)
-      const shared = kws.filter((k) => named.has(k))
-      const shown = shared.slice(0, 3)
-      return {
-        ...entry,
-        shares: shown,
-        // Derived from the three that are shown, so the row never credits a film for a
-        // keyword the reader cannot see.
-        sharedWith: [...new Set(shown.flatMap((k) => named.get(k) ?? []))],
-        shareCount: shared.length,
-        matches: kws.filter((k) => described.includes(k)),
-      }
-    }),
+  const withKeywords = await Promise.all(
+    shortlist.map(async (entry) => ({
+      entry,
+      shared: ((await keywordsForMovie(entry.movie.id)) ?? [])
+        .map((k) => k.name)
+        .filter((k) => named.has(k) || described.includes(k)),
+    })),
   )
+
+  const weights = await rarity(
+    [...new Set(withKeywords.flatMap((c) => c.shared))]
+      .map((name) => named.get(name))
+      .filter((k): k is { id: number; refs: string[] } => k !== undefined)
+      .map((k) => k.id),
+  )
+  const weigh = (name: string) => weights.get(named.get(name)?.id ?? -1) ?? 1
+
+  const suggestions: Suggestion[] = withKeywords.map(({ entry, shared }) => {
+    const mine = shared.filter((k) => named.has(k))
+    // Rarest first, so the line shows what actually distinguishes this film rather than
+    // whichever tag TMDB happened to list first.
+    const shown = [...mine].sort((a, b) => weigh(b) - weigh(a)).slice(0, 3)
+    return {
+      ...entry,
+      shares: shown,
+      // Derived from the three that are shown, so the row never credits a film for a
+      // keyword the reader cannot see.
+      sharedWith: [...new Set(shown.flatMap((k) => named.get(k)?.refs ?? []))],
+      shareCount: mine.reduce((sum, k) => sum + weigh(k), 0),
+      matches: shared.filter((k) => described.includes(k)),
+    }
+  })
 
   // What the person described is the most specific thing they said, so it outweighs both
   // the shared keywords and the similar lists that produced the shortlist.
