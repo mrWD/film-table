@@ -21,6 +21,11 @@ function isAllowedPath(path) {
     path === 'discover/movie' ||
     /^movie\/[a-z0-9_]+$/i.test(path) || // movie/{id}, movie/upcoming, movie/popular
     /^movie\/\d+\/(recommendations|similar|release_dates|watch\/providers|keywords)$/.test(path) ||
+    // Shows, for "something like…": this app tracks them too, and the first person to
+    // try it named one. Series live on their own endpoints, so a movie-only allowlist
+    // answered "no titles found in that" for Ted Lasso.
+    path === 'search/tv' ||
+    /^tv\/\d+\/(recommendations|similar|keywords|external_ids)$/.test(path) ||
     /^tv\/\d+\/watch\/providers$/.test(path) ||
     // Bridges a TVmaze show to its TMDB id; shows are tracked by TVmaze id here.
     /^find\/tt\d+$/.test(path) ||
