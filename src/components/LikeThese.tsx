@@ -49,14 +49,14 @@ export function LikeThese() {
     <section>
       <h2 className="h2">Something like…</h2>
       <p className="chips-hint">
-        Name a few films you have in mind, and say what you are after. The suggestions
-        come from the catalogue's own data — films it links to yours, and the tags they
-        share.
+        Name a few films or shows you have in mind, and say what you are after. The
+        suggestions come from the catalogue's own data — what it links to yours, and the
+        tags they share.
       </p>
       <input
         className="regionselect"
         value={text}
-        placeholder="like John Wick, Nobody, Monkey Man"
+        placeholder="like John Wick, or Ted Lasso"
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter') void run()
@@ -74,8 +74,8 @@ export function LikeThese() {
 
       {found && found.references.length === 0 && (
         <p className="hint">
-          No titles found in that. Name at least one film — the suggestions are built
-          from films you point at.
+          No titles found in that. Name at least one film or show — the suggestions are
+          built from what you point at.
         </p>
       )}
 
@@ -90,7 +90,7 @@ export function LikeThese() {
           {found.describedNothing && (
             <p className="chips-hint">
               The catalogue has no tag for the rest of what you described, so these are
-              films like the ones you named.
+              titles like the ones you named.
             </p>
           )}
         </>
