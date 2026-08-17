@@ -2,12 +2,17 @@ import {
   findKeyword,
   keywordCorpusSize,
   keywordsForMovie,
+  keywordsForTv,
   searchMoviesTmdb,
+  searchTvTmdb,
   similarToTmdb,
+  similarTvTmdb,
   type Keyword,
+  type TvResult,
 } from './tmdb'
+import { searchShowsTvmaze } from './api'
 import { aiAvailable, summarise } from './ai'
-import type { MovieResult } from './types'
+import type { MovieResult, ShowSummary } from './types'
 
 /**
  * "Something like John Wick, Nobody or Monkey Man."
@@ -39,8 +44,30 @@ import type { MovieResult } from './types'
  * "heist" — and when it does not, the UI says so instead of quietly ignoring it.
  */
 
+/**
+ * A named title, whichever half of the app it belongs to.
+ *
+ * Films and series are separate catalogues at TMDB, and this feature only asked the film
+ * one. Someone typed "with vibe like in Ted Lasso" and was told no titles were found —
+ * for a show the app itself tracks, on its own screen. So a reference now carries which
+ * kind it is, and everything downstream follows it.
+ */
+export type Medium = 'movie' | 'tv'
+
+export interface Reference {
+  medium: Medium
+  title: string
+  /** The film's `tmdb:` id, or the series' numeric TMDB id. */
+  key: string
+}
+
 export interface Suggestion {
-  movie: MovieResult
+  medium: Medium
+  movie?: MovieResult
+  /** Kept so a series can be looked up in TVmaze once it is known to be shown. */
+  tv?: TvResult
+  /** Series come back as the app's own TVmaze record, so a row can open one. */
+  show?: ShowSummary
   /** Which of the named films pointed here — computed, never phrased by the model. */
   because: string[]
   /** The shared keywords worth showing — a row is a line, not a list. */
@@ -54,7 +81,7 @@ export interface Suggestion {
 }
 
 export interface LikeTheseResult {
-  references: MovieResult[]
+  references: Reference[]
   /** Description words that turned out to be real, well-populated TMDB keywords. */
   described: string[]
   /** The person described something, and none of it exists in TMDB's vocabulary. */
@@ -125,6 +152,31 @@ async function rarity(ids: number[]): Promise<Map<number, number>> {
   // Capped, so "underground fights" (one film) does not outweigh everything else at once.
   for (const [id, films] of sized) out.set(id, Math.min(3, 400 / Math.max(films ?? 400, 1)))
   return out
+}
+
+/** A screenful. Each series among them costs a TVmaze lookup to become openable. */
+const SHOWN = 12
+
+/**
+ * Series turned into the records this app actually tracks.
+ *
+ * Shows are kept by TVmaze id here, and TMDB knows nothing about TVmaze, so a suggested
+ * series has to be found again by name before its row can lead anywhere. A show that
+ * cannot be found is dropped rather than shown as a dead end — the point of the row is
+ * that you can open it.
+ */
+async function openable(suggestions: Suggestion[]): Promise<Suggestion[]> {
+  const resolved = await Promise.all(
+    suggestions.map(async (s) => {
+      if (s.medium === 'movie') return s
+      const hits = await searchShowsTvmaze(s.tv!.name)
+      const match =
+        hits.find((h) => normalise(h.name) === normalise(s.tv!.name)) ??
+        hits.find((h) => normalise(h.name).startsWith(normalise(s.tv!.name)))
+      return match ? { ...s, show: match } : null
+    }),
+  )
+  return resolved.filter((s): s is Suggestion => s !== null)
 }
 
 const hasCyrillic = (s: string) => /[Ѐ-ӿ]/.test(s)
@@ -218,24 +270,44 @@ async function extractTitles(text: string): Promise<string[]> {
  * Уик"). There the guard is a release date: the junk that outranks the real "Никто" is an
  * undated fragment, and the 2021 film is the first dated hit.
  */
-async function resolve(title: string): Promise<MovieResult | null> {
+async function resolve(title: string): Promise<Reference | null> {
   const cyrillic = hasCyrillic(title)
+  const good = (found: string, query: string) =>
+    cyrillic || normalise(found).startsWith(normalise(query))
+
   for (const query of variants(title)) {
     // Russian titles rank correctly only when the search is told the language.
     for (const language of cyrillic ? ['ru-RU', undefined] : [undefined]) {
-      const hits = await searchMoviesTmdb(query, language)
-      const dated = (hits ?? []).filter((m) => m.releaseDate)
+      const films = (await searchMoviesTmdb(query, language)) ?? []
+      const dated = films.filter((m) => m.releaseDate)
       // The exact title wins over the popular one: asked for "The Raid", TMDB ranks
       // "The Raid 2" first, and answering with the sequel to a film someone named is a
       // small lie about what they said.
       const exact = dated.find((m) => normalise(m.title) === normalise(query))
-      if (exact) return exact
-      const best = dated[0]
-      if (!best) continue
-      if (cyrillic || normalise(best.title).startsWith(normalise(query))) return best
+      if (exact) return { medium: 'movie', title: exact.title, key: exact.id }
+      if (dated[0] && good(dated[0].title, query)) {
+        return { medium: 'movie', title: dated[0].title, key: dated[0].id }
+      }
+
+      // Films first only because most requests name one. A series is asked about
+      // whenever the film catalogue has nothing that matches.
+      const shows = (await searchTvTmdb(query, language)) ?? []
+      const aired = shows.filter((t) => t.year)
+      const exactTv = aired.find((t) => normalise(t.name) === normalise(query))
+      if (exactTv) return { medium: 'tv', title: exactTv.name, key: String(exactTv.tmdbId) }
+      if (aired[0] && good(aired[0].name, query)) {
+        return { medium: 'tv', title: aired[0].name, key: String(aired[0].tmdbId) }
+      }
     }
   }
   return null
+}
+
+/** Whatever the reference points at, asked the same two questions. */
+async function keywordsOf(ref: Reference): Promise<Keyword[] | null> {
+  return ref.medium === 'movie'
+    ? keywordsForMovie(ref.key)
+    : keywordsForTv(Number(ref.key))
 }
 
 /** What the request says apart from the titles: "corridor fights", "с драками". */
@@ -309,10 +381,12 @@ async function describedKeywords(rest: string, words: string[]): Promise<Keyword
 
 export async function findLikeThese(text: string): Promise<LikeTheseResult> {
   const titles = await extractTitles(text)
-  const references: MovieResult[] = []
+  const references: Reference[] = []
   for (const title of titles) {
     const found = await resolve(title)
-    if (found && !references.some((r) => r.id === found.id)) references.push(found)
+    if (found && !references.some((r) => r.key === found.key && r.medium === found.medium)) {
+      references.push(found)
+    }
   }
   const empty = { references: [], described: [], describedNothing: false, suggestions: [] }
   if (references.length === 0) return empty
@@ -320,8 +394,11 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
   const { rest, words } = description(text, titles)
   const described = await describedKeywords(rest, words)
 
-  const referenceIds = new Set(references.map((r) => r.id))
-  const votes = new Map<string, { movie: MovieResult; because: string[] }>()
+  const referenceIds = new Set(references.map((r) => `${r.medium}:${r.key}`))
+  const votes = new Map<
+    string,
+    { medium: Medium; movie?: MovieResult; tv?: TvResult; because: string[] }
+  >()
   // Keyword -> the named films carrying it. A set would be enough to rank by, but not to
   // explain: "dog" is John Wick's tag, and a film sharing it was being credited to
   // whichever reference happened to list it first — Dawn of the Dead read "dog — like
@@ -329,19 +406,33 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
   const named = new Map<string, { id: number; refs: string[] }>()
 
   for (const reference of references) {
-    for (const kw of (await keywordsForMovie(reference.id)) ?? []) {
+    for (const kw of (await keywordsOf(reference)) ?? []) {
       if (NOT_ABOUT_THE_FILM.has(kw.name)) continue
       const carrier = named.get(kw.name)
       if (carrier) carrier.refs.push(reference.title)
       else named.set(kw.name, { id: kw.id, refs: [reference.title] })
     }
-    for (const movie of (await similarToTmdb(reference.id)) ?? []) {
-      if (referenceIds.has(movie.id)) continue
-      const seen = votes.get(movie.id)
+
+    // A named film suggests films and a named series suggests series: TMDB keeps the two
+    // catalogues apart, and there is no "films like this show" list to ask for. Name one
+    // of each and both kinds come back, which is what the app tracks anyway.
+    const vote = (key: string, entry: () => Omit<(typeof votes) extends Map<string, infer V> ? V : never, 'because'>) => {
+      if (referenceIds.has(key)) return
+      const seen = votes.get(key)
       if (seen) {
         if (!seen.because.includes(reference.title)) seen.because.push(reference.title)
       } else {
-        votes.set(movie.id, { movie, because: [reference.title] })
+        votes.set(key, { ...entry(), because: [reference.title] })
+      }
+    }
+
+    if (reference.medium === 'movie') {
+      for (const movie of (await similarToTmdb(reference.key)) ?? []) {
+        vote(`movie:${movie.id}`, () => ({ medium: 'movie', movie }))
+      }
+    } else {
+      for (const tv of (await similarTvTmdb(Number(reference.key))) ?? []) {
+        vote(`tv:${tv.tmdbId}`, () => ({ medium: 'tv', tv }))
       }
     }
   }
@@ -354,7 +445,10 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
   const withKeywords = await Promise.all(
     shortlist.map(async (entry) => ({
       entry,
-      kws: (await keywordsForMovie(entry.movie.id)) ?? [],
+      kws:
+        (entry.medium === 'movie'
+          ? await keywordsForMovie(entry.movie!.id)
+          : await keywordsForTv(entry.tv!.tmdbId)) ?? [],
     })),
   )
 
@@ -405,11 +499,11 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
 
   return {
     references,
+    suggestions: await openable(suggestions.slice(0, SHOWN)),
     described: describedNames,
     // Only when something was actually described. A request that is just a list of
     // films has nothing left over, and telling that person the catalogue lacks a tag
     // for what they described would be answering a question they did not ask.
     describedNothing: words.length > 0 && described.length === 0,
-    suggestions: suggestions.slice(0, 20),
   }
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { findLikeThese, type Suggestion } from '../lib/like-these'
-import { MovieResultRow } from './cards'
+import { MovieResultRow, ShowResultRow } from './cards'
 
 /** Names, joined the way a person would say them. */
 function list(items: string[]): string {
@@ -96,9 +96,14 @@ export function LikeThese() {
         </>
       )}
 
-      {found?.suggestions.map((s) => (
-        <MovieResultRow key={s.movie.id} result={s.movie} typeTag reason={reason(s)} />
-      ))}
+      {/* Both kinds, because both are what this app tracks and either can be named. */}
+      {found?.suggestions.map((s) =>
+        s.show ? (
+          <ShowResultRow key={`s${s.show.id}`} show={s.show} typeTag reason={reason(s)} />
+        ) : s.movie ? (
+          <MovieResultRow key={`m${s.movie.id}`} result={s.movie} typeTag reason={reason(s)} />
+        ) : null,
+      )}
     </section>
   )
 }

@@ -123,6 +123,75 @@ export async function searchMoviesTmdb(
     .slice(0, 20)
 }
 
+// ---------- series ----------
+
+/**
+ * The same three questions asked of a series instead of a film.
+ *
+ * They are separate endpoints on TMDB, and separate here rather than folded into the
+ * movie ones because the shapes differ: a series has `name` and `first_air_date`, and its
+ * keywords come back under `results` rather than `keywords`. The app tracks shows as well
+ * as films, and the first person to try "something like…" named a show.
+ */
+export interface TvResult {
+  /** TMDB's own id, which is not what the library tracks — see showByImdb. */
+  tmdbId: number
+  name: string
+  year: string | null
+  poster: string | null
+}
+
+interface TmdbTv {
+  id: number
+  name?: string
+  first_air_date?: string | null
+  poster_path?: string | null
+}
+
+function mapTv(t: TmdbTv): TvResult | null {
+  if (!t.id || !t.name) return null
+  return {
+    tmdbId: t.id,
+    name: t.name,
+    year: t.first_air_date ? t.first_air_date.slice(0, 4) : null,
+    poster: t.poster_path ? `${IMG}${t.poster_path}` : null,
+  }
+}
+
+export async function searchTvTmdb(query: string, language?: string): Promise<TvResult[] | null> {
+  const data = await tmdbGet<{ results?: TmdbTv[] }>('search/tv', {
+    query,
+    ...(language ? { language } : {}),
+  })
+  if (!data) return null
+  return (data.results ?? []).map(mapTv).filter((t): t is TvResult => t !== null)
+}
+
+export async function similarTvTmdb(tmdbId: number): Promise<TvResult[] | null> {
+  const pages = await Promise.all([
+    tmdbGet<{ results?: TmdbTv[] }>(`tv/${tmdbId}/recommendations`),
+    tmdbGet<{ results?: TmdbTv[] }>(`tv/${tmdbId}/similar`),
+  ])
+  if (pages.every((p) => p === null)) return null
+  const seen = new Set<number>()
+  const out: TvResult[] = []
+  for (const page of pages) {
+    for (const raw of page?.results ?? []) {
+      const tv = mapTv(raw)
+      if (!tv || seen.has(tv.tmdbId)) continue
+      seen.add(tv.tmdbId)
+      out.push(tv)
+    }
+  }
+  return out.slice(0, 40)
+}
+
+/** The IMDb id, which is how a TMDB series becomes the TVmaze record this app tracks. */
+export async function imdbIdForTv(tmdbId: number): Promise<string | null> {
+  const data = await tmdbGet<{ imdb_id?: string | null }>(`tv/${tmdbId}/external_ids`)
+  return data?.imdb_id ?? null
+}
+
 // ---------- keywords ----------
 
 export interface Keyword {
@@ -135,6 +204,12 @@ export async function keywordsForMovie(id: string): Promise<Keyword[] | null> {
   const numeric = id.replace(/^tmdb:/, '')
   const data = await tmdbGet<{ keywords?: Keyword[] }>(`movie/${numeric}/keywords`)
   return data?.keywords ?? null
+}
+
+/** A series keeps its tags under `results`, not `keywords`. Same data, different envelope. */
+export async function keywordsForTv(tmdbId: number): Promise<Keyword[] | null> {
+  const data = await tmdbGet<{ results?: Keyword[] }>(`tv/${tmdbId}/keywords`)
+  return data?.results ?? null
 }
 
 /**

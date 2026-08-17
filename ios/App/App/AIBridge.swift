@@ -162,10 +162,19 @@ public class AIBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             guard let field = item["name"] as? String else { return nil }
             let optional = item["optional"] as? Bool ?? false
             let describe = item["description"] as? String
-            let schema: DynamicGenerationSchema
+            var schema: DynamicGenerationSchema
             if let choices = item["anyOf"] as? [String], !choices.isEmpty {
                 // The whole point: the model picks from the app's vocabulary or nothing.
                 schema = DynamicGenerationSchema(name: "\(name).\(field)", anyOf: choices)
+                // Several of them when the caller wants a short list. Kept small: asked
+                // for more, the model fills the space with plausible padding.
+                if item["array"] as? Bool == true {
+                    schema = DynamicGenerationSchema(
+                        arrayOf: schema,
+                        minimumElements: 0,
+                        maximumElements: item["max"] as? Int ?? 3
+                    )
+                }
             } else {
                 switch item["type"] as? String {
                 case "number": schema = DynamicGenerationSchema(type: Int.self)
