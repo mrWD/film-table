@@ -86,6 +86,12 @@ export interface LikeTheseResult {
   described: string[]
   /** The person described something, and none of it exists in TMDB's vocabulary. */
   describedNothing: boolean
+  /**
+   * Where the on-device model actually did something, so the screen can say so and
+   * nowhere else. Both are usually false: titles come off capitalisation or the word
+   * "like", and everything after that is the catalogue.
+   */
+  readByModel: { titles: boolean; description: boolean }
   suggestions: Suggestion[]
 }
 
@@ -211,11 +217,53 @@ const CAPITALISED = /[A-ZА-ЯЁ][\p{L}\p{N}'’-]*(?:\s+[A-ZА-ЯЁ][\p{L}\p{N}
 function guessTitles(text: string): string[] {
   const quoted = [...text.matchAll(/["«“']([^"»”']{2,60})["»”']/g)].map((m) => m[1].trim())
   if (quoted.length) return quoted.slice(0, MAX_REFERENCES)
-  return [...text.matchAll(CAPITALISED)]
+
+  const capitalised = [...text.matchAll(CAPITALISED)]
     .filter((m) => opensARequest(text, m) === false)
     .map((m) => m[0].trim())
     .filter((t) => t.length > 2 && !NOT_A_TITLE.has(t.toLowerCase()))
-    .slice(0, MAX_REFERENCES)
+  if (capitalised.length) return capitalised.slice(0, MAX_REFERENCES)
+
+  return afterTheWordLike(text)
+}
+
+/**
+ * What comes after "like", when nothing was capitalised.
+ *
+ * Typed on a phone, "With vibe like ted lasso" has exactly one capital and it belongs to
+ * the sentence, not the show. Reading titles off capitalisation finds nothing at all
+ * there, and this feature answered "no titles found" for a show the app tracks.
+ *
+ * People say what they want the same way every time — "like X", "как X", "типа X" — so
+ * the tail of the sentence is worth trying as a title. It is only tried when
+ * capitalisation found nothing, and TMDB is the one that decides whether it names
+ * anything: a phrase that is not a title comes back empty, which is where this started.
+ */
+/*
+ * Word boundaries by hand, because `\b` is ASCII: in "что-то как во все тяжкие" there is
+ * no boundary before "как" as far as `\b` is concerned, so every Russian marker was
+ * silently never matching.
+ */
+const EDGE = { start: String.raw`(?<![\p{L}\p{N}])`, end: String.raw`(?![\p{L}\p{N}])` }
+const LIKE = new RegExp(
+  `${EDGE.start}(?:like|similar to|как в|как|типа|вроде)${EDGE.end}`,
+  'giu',
+)
+const SEPARATOR = new RegExp(
+  `\\s*(?:,|${EDGE.start}(?:or|and|или|и)${EDGE.end})\\s*`,
+  'iu',
+)
+
+function afterTheWordLike(text: string): string[] {
+  const marks = [...text.matchAll(LIKE)]
+  const last = marks[marks.length - 1]
+  const from = last ? (last.index ?? 0) + last[0].length : 0
+  const tail = text
+    .slice(from)
+    .split(SEPARATOR)
+    .map((part) => part.trim().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
+    .filter((part) => part.length > 2 && !NOT_A_TITLE.has(part.toLowerCase()))
+  return tail.slice(0, MAX_REFERENCES)
 }
 
 /**
@@ -242,20 +290,21 @@ function opensARequest(text: string, match: RegExpMatchArray): boolean {
   return !NOT_A_TITLE.has(next.toLowerCase())
 }
 
-async function extractTitles(text: string): Promise<string[]> {
+async function extractTitles(text: string): Promise<{ titles: string[]; byModel: boolean }> {
   const guessed = guessTitles(text)
-  if (guessed.length > 0) return guessed
-  if (!(await aiAvailable())) return []
+  if (guessed.length > 0) return { titles: guessed, byModel: false }
+  if (!(await aiAvailable())) return { titles: [], byModel: false }
   const answer = await summarise(
     text,
     'This request mentions films or shows by name. Reply with only those titles, one ' +
       'per line, exactly as written. If it names none, reply with nothing.',
   )
-  return (answer ?? '')
+  const titles = (answer ?? '')
     .split(/\n+/)
     .map((line) => line.replace(/^[-*\d.)\s]+/, '').trim())
     .filter((line) => line.length > 1 && line.length < 60)
     .slice(0, MAX_REFERENCES)
+  return { titles, byModel: titles.length > 0 }
 }
 
 /**
@@ -327,8 +376,11 @@ function description(text: string, titles: string[]): { rest: string; words: str
  * The part of the request that is not a title, turned into TMDB keywords — only the ones
  * that exist and carry enough films to mean anything.
  */
-async function describedKeywords(rest: string, words: string[]): Promise<Keyword[]> {
-  if (words.length === 0) return []
+async function describedKeywords(
+  rest: string,
+  words: string[],
+): Promise<{ found: Keyword[]; byModel: boolean }> {
+  if (words.length === 0) return { found: [], byModel: false }
 
   // Pairs first: "martial arts" is a keyword, "martial" on its own is not. Plurals are
   // tried singular because the vocabulary is written in the singular ("gunfight").
@@ -347,7 +399,7 @@ async function describedKeywords(rest: string, words: string[]): Promise<Keyword
     if (kw && !found.some((k) => k.id === kw.id)) found.push({ id: kw.id, name: kw.name })
     if (found.length >= 3) break
   }
-  if (found.length > 0) return found
+  if (found.length > 0) return { found, byModel: false }
 
   /*
    * Nothing matched, which for a request written in Russian is expected: the vocabulary
@@ -363,7 +415,7 @@ async function describedKeywords(rest: string, words: string[]): Promise<Keyword
    * An earlier version of that test looked promising only because the list I handed it
    * was one I had written myself, with the obvious answers already in it.
    */
-  if (!(await aiAvailable())) return []
+  if (!(await aiAvailable())) return { found: [], byModel: false }
   const english = await summarise(
     rest,
     'Translate what the person wants to watch into at most two short English film tags, ' +
@@ -376,11 +428,11 @@ async function describedKeywords(rest: string, words: string[]): Promise<Keyword
     const kw = await findKeyword(term)
     if (kw && !found.some((k) => k.id === kw.id)) found.push({ id: kw.id, name: kw.name })
   }
-  return found
+  return { found, byModel: found.length > 0 }
 }
 
 export async function findLikeThese(text: string): Promise<LikeTheseResult> {
-  const titles = await extractTitles(text)
+  const { titles, byModel: titlesByModel } = await extractTitles(text)
   const references: Reference[] = []
   for (const title of titles) {
     const found = await resolve(title)
@@ -388,11 +440,17 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
       references.push(found)
     }
   }
-  const empty = { references: [], described: [], describedNothing: false, suggestions: [] }
+  const empty = {
+    references: [],
+    described: [],
+    describedNothing: false,
+    suggestions: [],
+    readByModel: { titles: false, description: false },
+  }
   if (references.length === 0) return empty
 
   const { rest, words } = description(text, titles)
-  const described = await describedKeywords(rest, words)
+  const { found: described, byModel: describedByModel } = await describedKeywords(rest, words)
 
   const referenceIds = new Set(references.map((r) => `${r.medium}:${r.key}`))
   const votes = new Map<
@@ -501,6 +559,7 @@ export async function findLikeThese(text: string): Promise<LikeTheseResult> {
     references,
     suggestions: await openable(suggestions.slice(0, SHOWN)),
     described: describedNames,
+    readByModel: { titles: titlesByModel, description: describedByModel },
     // Only when something was actually described. A request that is just a list of
     // films has nothing left over, and telling that person the catalogue lacks a tag
     // for what they described would be answering a question they did not ask.

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { findLikeThese, type Suggestion } from '../lib/like-these'
 import { MovieResultRow, ShowResultRow } from './cards'
+import { IconSparkle } from './Icons'
 
 /** Names, joined the way a person would say them. */
 function list(items: string[]): string {
@@ -69,7 +70,13 @@ export function LikeThese() {
         disabled={!text.trim() || busy}
         onClick={() => void run()}
       >
-        {busy ? 'Looking…' : 'Find something like these'}
+        {busy ? (
+          <>
+            <IconSparkle size={16} strokeWidth={2} className="spark" /> Looking…
+          </>
+        ) : (
+          'Find something like these'
+        )}
       </button>
 
       {found && found.references.length === 0 && (
@@ -82,6 +89,20 @@ export function LikeThese() {
       {found && found.references.length > 0 && (
         <>
           <p className="chips-hint">Matched: {found.references.map((r) => r.title).join(', ')}</p>
+          {/* Marked where it is true and nowhere else. Almost everything on this screen
+              comes from the catalogue; the model reads the sentence when nothing in it
+              was capitalised, and puts a description into English. Badging the whole
+              feature as AI would be a claim about the app that is not one. */}
+          {(found.readByModel.titles || found.readByModel.description) && (
+            <p className="chips-hint ondevice">
+              <IconSparkle size={14} strokeWidth={1.9} />
+              {found.readByModel.titles && found.readByModel.description
+                ? 'Your phone read the title and the description — on the device, nothing sent anywhere'
+                : found.readByModel.titles
+                  ? 'Your phone read the title out of that sentence — on the device'
+                  : 'Your phone put what you described into English — on the device'}
+            </p>
+          )}
           {found.described.length > 0 && (
             <p className="chips-hint">Looking for: {list(found.described)}</p>
           )}

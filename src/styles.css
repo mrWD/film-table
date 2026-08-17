@@ -1984,3 +1984,25 @@ input.regionselect {
   line-height: 1.55;
   color: var(--ink);
 }
+
+/* The mark for work the on-device model did, and the sign that it is doing it now. */
+.ondevice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spark {
+  animation: sparkpulse 1.1s ease-in-out infinite;
+}
+
+@keyframes sparkpulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+
+/* Someone who turns animation off is telling the app something; a spinning icon that
+   ignores that is worse than a still one. */
+@media (prefers-reduced-motion: reduce) {
+  .spark { animation: none; opacity: 0.8; }
+}

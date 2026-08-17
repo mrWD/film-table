@@ -165,3 +165,20 @@ export const IconLinkedIn = ({ size = 24, className }: IconProps) => (
     <path d="M4.98 3.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM3 9.5h4v11H3v-11zm7 0h3.8v1.5h.05c.53-.95 1.83-1.95 3.75-1.95 4 0 4.75 2.5 4.75 5.8v5.65h-4v-5c0-1.2-.02-2.75-1.7-2.75-1.7 0-1.96 1.3-1.96 2.66v5.09h-4v-11z" />
   </svg>
 )
+
+/**
+ * The mark for work the on-device model did.
+ *
+ * Shown only where it actually did some — reading a title out of a sentence that had no
+ * capitals, or turning a description into English. Most of what the features around it
+ * produce comes from the catalogue, and labelling that as AI would be a claim about the
+ * app that is not true.
+ */
+export const IconSparkle = (p: IconProps) =>
+  svg(
+    <>
+      <path d="M12 3l1.7 4.6L18 9.3l-4.3 1.7L12 15.6l-1.7-4.6L6 9.3l4.3-1.7z" />
+      <path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" />
+    </>,
+    p,
+  )
