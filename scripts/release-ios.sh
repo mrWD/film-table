@@ -36,6 +36,11 @@ xcodebuild -exportArchive -archivePath "${ARCHIVE}" \
   -allowProvisioningUpdates
 
 echo
+# The archive is signed for development; only the export carries the distribution
+# signature, and checking the wrong one is how "signed with Apple Development" got
+# printed for a perfectly good build.
+rm -rf "${OUT}/verify" && mkdir -p "${OUT}/verify"
+(cd "${OUT}/verify" && unzip -q "${OUT}/export/App.ipa")
 echo "Signed with:"
-codesign -dvv "${ARCHIVE}/Products/Applications/App.app" 2>&1 | grep '^Authority=Apple' | head -1
+codesign -dvv "${OUT}/verify/Payload/App.app" 2>&1 | grep "^Authority=Apple" | head -1
 echo "Ready: ${OUT}/export/App.ipa"
