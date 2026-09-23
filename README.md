@@ -1,14 +1,20 @@
 # FilmTable
 
-**→ [film-table.vercel.app](https://film-table.vercel.app)**
-
 A personal TV series and movie tracker, written after TV Time shut down. It runs
-on **Android, iPhone and the web** from a single codebase (a PWA), **with no
-backend for your data**: the library is stored on the device and metadata comes
-from free APIs.
+on **Android, iPhone and the web** from a single codebase, **with no backend for
+your data**: the library is stored on the device and metadata comes from free APIs.
+
+**Try it:** [film-table.vercel.app](https://film-table.vercel.app) (web / PWA) ·
+[iPhone beta on TestFlight](https://testflight.apple.com/join/QvqtTn6U) ·
+[product page](https://mrwd.github.io/products/film-table/)
+
+<img src="docs/readme/film-table.png" alt="FilmTable: the Shows screen with the Up Next queue" width="320">
+
+More screenshots, as prepared for the store listings, are in
+[docs/store/screenshots](docs/store/screenshots).
 
 The previous address — [mrwd.github.io/film-table](https://mrwd.github.io/film-table/)
-— still works and stays up for the libraries built there: `localStorage` is tied
+— still works and stays up for the libraries built there: browser storage is tied
 to a domain and does not move on its own.
 
 A free fan project. Not affiliated with TV Time or Whip Media.
@@ -42,6 +48,14 @@ A free fan project. Not affiliated with TV Time or Whip Media.
   background at startup.
 - **PWA** — installs to the iPhone/Android home screen and works offline (service
   worker).
+- **Native apps** — the same code wrapped with Capacitor for iOS and Android. The
+  native build adds episode reminders (local notifications computed from air dates,
+  no push server), a home-screen widget with the Up Next queue (`ios/App/FilmTableWidget`),
+  and on-device AI on iPhones that have it: a spoiler-free recap, a pasted-list
+  import, the year in words, and translation of descriptions. Nothing is sent
+  anywhere.
+- **Where to watch** — streaming availability per country from TMDB's JustWatch
+  feed, when the TMDB proxy is reachable.
 
 ## Data
 
@@ -65,9 +79,11 @@ The sources **complement** each other rather than replacing one another:
 - Supplementary sources are wrapped in a timeout, so a slow response never holds up
   the main results.
 
-User data lives only in the device's `localStorage` (the `filmtable-library-v1` /
-`filmtable-cache-v1` keys). There is no sync between devices — move your library
-via Profile → Export/Import.
+User data lives only on the device: IndexedDB in a browser (the `filmtable-kv`
+database with the `filmtable-library-v1` / `filmtable-cache-v1` keys), a JSON file
+in private app storage in the native apps. The storage adapter is shared with the
+sibling trackers through [tables-core](https://github.com/mrWD/tables-core). There
+is no sync between devices — move your library via Profile → Export/Import.
 
 ## Running locally
 
@@ -124,7 +140,9 @@ The app gets an icon, opens in full-screen mode and works offline.
   entered in the Profile and stored only on the device) — the source architecture
   already allows for it.
 - There is no cloud sync (no backend, by design) — manual backups instead.
-- The same code can be packaged for the app stores (APK/IPA) via Capacitor.
+- The iOS app is in open TestFlight beta; an App Store release and a Google Play
+  build are the next steps. The Android project builds and runs, but is not
+  published yet.
 
 ## Documentation
 
@@ -135,15 +153,20 @@ The app gets an icon, opens in full-screen mode and works offline.
 | [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md) | the APIs and their quirks, confirmed by measurements |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | why it is built this way, and the pitfalls already hit |
 | [docs/DEPLOY.md](docs/DEPLOY.md) | the two addresses, environment variables, production checks |
+| [docs/RELEASE-IOS.md](docs/RELEASE-IOS.md) | building and signing the iOS app for TestFlight |
+| [docs/STORE.md](docs/STORE.md) | store listing texts, categories, screenshots |
 | [docs/PLAN.md](docs/PLAN.md) | the original plan (a historical document) |
 
 ## Layout
 
 ```
-api/tmdb/     serverless proxy to TMDB (Vercel)
-src/lib/      types, API clients, genre reconciliation, formatting
+api/tmdb.js   serverless proxy to TMDB (Vercel)
+src/lib/      types, API clients, storage, native bridges, genre reconciliation, formatting
 src/store/    zustand: library and cache (persist), explore, recommend, theme, ui
               selectors.ts — all derived logic as pure functions
-src/components/ icons, UI primitives, cards, supporting the project
+src/components/ icons, UI primitives, cards, recap, year review, feedback
 src/pages/    Shows / Movies / Explore / ShowDetail / MovieDetail / Profile
+ios/, android/  Capacitor projects; ios/App/FilmTableWidget is the WidgetKit widget,
+              AIBridge / TranslateBridge / WidgetBridge are the Swift bridges
+docs/         architecture, data sources, decisions, deploy, release, store
 ```
