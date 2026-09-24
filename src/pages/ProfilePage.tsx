@@ -14,6 +14,7 @@ import { SupportLinks } from '../components/Support'
 import { Feedback } from '../components/Feedback'
 import { exportJsonFile, isNativeApp } from 'tables-core'
 import { native } from '../lib/native'
+import { donationsHidden, siteLink } from '../lib/from-app'
 import { useReminders } from '../store/reminders'
 import { formatBigDuration } from '../lib/format'
 import { Poster } from '../components/ui'
@@ -311,15 +312,18 @@ export default function ProfilePage() {
         <Feedback />
       </section>
 
-      <section>
-        <h2 className="h2">Support</h2>
-        <SupportLinks />
-      </section>
+      {/* App Store 3.1.1: no donation buttons inside the app — see lib/from-app. */}
+      {!donationsHidden() && (
+        <section>
+          <h2 className="h2">Support</h2>
+          <SupportLinks />
+        </section>
+      )}
 
       <section>
         <h2 className="h2">More from the author</h2>
         <p className="attribution">
-          <a href="https://mrwd.github.io/" target="_blank" rel="noreferrer">
+          <a href={siteLink('https://mrwd.github.io/')} target="_blank" rel="noreferrer">
             All products &rarr;
           </a>
         </p>

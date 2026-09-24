@@ -9,6 +9,7 @@ import ProfilePage from './pages/ProfilePage'
 import InsightsPage from './pages/InsightsPage'
 import { BottomNav, ConfirmHost, ScrollToTop, ToastHost } from './components/ui'
 import { SupportFab } from './components/Support'
+import { donationsHidden } from './lib/from-app'
 import { MigrationBanner } from './components/MigrationBanner'
 import { InstallHint } from './components/InstallHint'
 import { Analytics } from './components/Analytics'
@@ -68,7 +69,8 @@ function Shell() {
         <Route path="*" element={<Navigate to="/shows" replace />} />
       </Routes>
       <BottomNav />
-      <SupportFab />
+      {/* App Store 3.1.1: no donation buttons inside the app — see lib/from-app. */}
+      {!donationsHidden() && <SupportFab />}
       <ToastHost />
       <ConfirmHost />
       <Analytics />
