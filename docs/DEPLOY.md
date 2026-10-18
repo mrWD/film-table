@@ -101,8 +101,9 @@ VERCEL_ENV=production node --env-file=.env.local scripts/dev-api.mjs
 
 ### Who the proxy answers (2026-10-18)
 
-- **With an Origin:** exactly `capacitor://localhost` (iOS), `https://localhost`
-  (Android), its own host (which covers preview deployments), `film-table.vercel.app`,
+- **With an Origin:** exactly `capacitor://localhost` (iOS — measured in the simulator
+  with GamesTable's build, the same Capacitor shell, against the same gate in production
+  mode: `Origin: capacitor://localhost`, `Sec-Fetch-Site: cross-site`, answered 200), `https://localhost` (Android), its own host (which covers preview deployments), `film-table.vercel.app`,
   `mrwd.github.io` and anything in `ALLOWED_ORIGINS`. Any `http://localhost:<port>`
   only when `VERCEL_ENV` is not `production`.
 - **Without one:** only when the browser says `Sec-Fetch-Site: same-origin` — measured:
