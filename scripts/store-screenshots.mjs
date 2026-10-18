@@ -68,6 +68,7 @@ const SITE_SHOTS = (showId) => [
   { name: 'show', hash: `#/show/${showId}` },
   { name: 'for-you', hash: '#/explore' },
   { name: 'search', hash: '#/explore', act: (page) => search(page, 'Search shows and movies', 'bonanza') },
+  { name: 'explore', hash: '#/explore', act: (page) => search(page, 'Search shows and movies', ''), scroll: 'Airing tonight' },
 ]
 
 const SETS = [
@@ -137,7 +138,7 @@ function trackNetwork(page) {
   }
 }
 
-async function shoot(page, set, { name, hash, act }) {
+async function shoot(page, set, { name, hash, act, scroll }) {
   await page.evaluate((h) => (window.location.hash = h), hash)
   await page.settle()
   if (act) {
@@ -153,6 +154,15 @@ async function shoot(page, set, { name, hash, act }) {
     console.log(`${name}: ${settled ? 'settled' : 'still loading'} after ${Math.round((Date.now() - started) / 1000)}s`)
   }
   await page.evaluate(() => window.scrollTo(0, 0))
+  if (scroll) {
+    // Lands the heading just under the sticky search bar rather than behind it.
+    await page.getByRole('heading', { name: scroll }).evaluate((h) => {
+      const bar = document.querySelector('input')?.closest('div')?.parentElement
+      window.scrollBy(0, h.getBoundingClientRect().top - (bar?.getBoundingClientRect().bottom ?? 0) - 12)
+    })
+    // Lazy images below the fold start loading only once they are scrolled to.
+    await page.settle()
+  }
   // Only what is on screen: lazy images further down never load, by design.
   await page.waitForFunction(() =>
     [...document.images]

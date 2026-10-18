@@ -70,7 +70,7 @@ The honest answers, same on both stores:
 - `docs/store/screenshots/android/` — 1080×2400. Dark theme, on purpose: between the
   two sets a reviewer sees the app in both themes, which is worth more than matching.
 - `docs/store/site/` — 414×896 light and dark pairs under the file names the products
-  page uses (`up-next`, `show`, `for-you`, `search`).
+  page uses (`up-next`, `show`, `for-you`, `search`, `explore`).
 - `docs/store/feature-graphic-1024x500.png` — Play's feature graphic.
 - `docs/store/frame/` — the status and gesture bars, lifted from the simulator and
   emulator, that the script lays over the store sets.
