@@ -126,7 +126,8 @@ Aggregated numbers cannot be shown inside the app without a server token, so
   catch-all — the path is passed as a `?path=search/movie` parameter to an ordinary
   `api/tmdb.js` file.
 - **Ports in the proxy allowlist.** Hard-coded localhost ports break the check when
-  the dev server runs on a different port — any loopback is allowed.
+  the dev server runs on a different port — any loopback is allowed, but only outside
+  production since 2026-10-18 (see DEPLOY, "Who the proxy answers").
 - **Identical recommendation explanations.** Taking the globally heaviest titles
   puts the same phrase under every card. Compute the overlap per card.
 - **Side effects in zustand reducers.** A counter called inside `set((s) => ...)`
@@ -172,8 +173,10 @@ Two findings from the pilot, both already paid for:
 The native build reaches the TMDB proxy by absolute URL — there is no origin for
 it to be same as. `VITE_API_BASE` still wins; the fallback to the production
 address keeps a store build from silently losing TMDB. The proxy needed no
-change: its origin check parses `capacitor://localhost` to the host `localhost`,
-which its loopback rule already permits (verified against production).
+change at the time: its origin check parsed `capacitor://localhost` to the host
+`localhost`, which its loopback rule permitted. Since 2026-10-18 the store origins are
+listed by name instead (`capacitor://localhost`, `https://localhost`) and the loopback
+rule no longer applies in production — see DEPLOY.
 
 ## Home-screen widgets (iOS)
 
@@ -247,3 +250,29 @@ it was handed: summarising, tagging, picking the matching item out of candidates
 feature built here should hand it text and ask about *that text*, never ask it to
 produce structure from a vague sentence.
 
+
+## Fixes from the legal review (2026-10-18)
+
+A review of the terms the app depends on found risks that end in a revoked key, a
+rejected build or a takedown rather than a lawsuit. What changed, and why:
+
+- **TMDB attribution is the one its terms spell out.** Section 3 of TMDB's API terms asks
+  for its logo and a fixed notice: "This product uses TMDB and the TMDB APIs but is not
+  endorsed, certified, or otherwise approved by TMDB." Both are at the foot of Profile;
+  the logo is TMDB's own file, unaltered, and smaller than anything naming FilmTable.
+- **No translation of TMDB overviews.** The same terms reserve TMDB content from use
+  "in connection with" machine learning or AI, and Apple's Translation framework is
+  that. Overviews from Cinemeta and iTunes, and TVmaze summaries (CC BY-SA), still offer
+  it. Cinemeta's text is itself largely drawn from TMDB and IMDb, so the same question
+  applies there; it is left as it was until the owner decides.
+- **No iTunes artwork** — see DATA-SOURCES.
+- **AI-written text says so.** The recap and the year in words both carry an
+  "AI-written on your phone" line; the year in words only when the model's paragraph
+  was kept, not the hand-written fallback.
+- **Open-source licences.** `scripts/gen-licenses.mjs` writes `public/licenses.txt` on
+  every build and Profile opens it in place.
+- **The proxy** stopped answering requests with no Origin and any loopback origin in
+  production, and gained a per-address rate limit — DEPLOY, "Who the proxy answers".
+- **Store screenshots** no longer show studio key art: the films are Blender open movies
+  (CC BY posters) and TV artwork is blurred. `scripts/store-screenshots.mjs` makes them;
+  STORE.md has the rules.

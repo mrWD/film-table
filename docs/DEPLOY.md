@@ -87,12 +87,37 @@ VITE_API_BASE=http://localhost:3001 npx vite         # frontend
 Worth checking (all of this has already caught real defects):
 
 ```bash
-curl -s "localhost:3001/api/tmdb?path=search/movie&query=the+matrix"       # 200, contains The Matrix
-curl -s -o /dev/null -w "%{http_code}\n" "localhost:3001/api/tmdb?path=account/lists"  # 403
+O='Origin: capacitor://localhost'   # what the iOS app sends; a bare curl is now refused
+curl -s -H "$O" "localhost:3001/api/tmdb?path=search/movie&query=the+matrix"       # 200, contains The Matrix
+curl -s -o /dev/null -w "%{http_code}\n" -H "$O" "localhost:3001/api/tmdb?path=account/lists"  # 403
 curl -s -o /dev/null -w "%{http_code}\n" -H "Origin: https://evil.example" \
      "localhost:3001/api/tmdb?path=search/movie&query=x"                   # 403
-curl -s "localhost:3001/api/tmdb?path=movie/603" | grep -c "eyJhbGci"      # 0 — the key does not leak
+curl -s -H "$O" "localhost:3001/api/tmdb?path=movie/603" | grep -c "eyJhbGci"      # 0 — the key does not leak
+
+# As production judges it (VERCEL_ENV=production): no Origin and no Sec-Fetch-Site,
+# or a loopback dev-server Origin, is 403; Sec-Fetch-Site: same-origin is 200.
+VERCEL_ENV=production node --env-file=.env.local scripts/dev-api.mjs
 ```
+
+### Who the proxy answers (2026-10-18)
+
+- **With an Origin:** exactly `capacitor://localhost` (iOS), `https://localhost`
+  (Android), its own host (which covers preview deployments), `film-table.vercel.app`,
+  `mrwd.github.io` and anything in `ALLOWED_ORIGINS`. Any `http://localhost:<port>`
+  only when `VERCEL_ENV` is not `production`.
+- **Without one:** only when the browser says `Sec-Fetch-Site: same-origin` — measured:
+  that is exactly what the web app's own fetches send (no Origin, `same-origin`, a Referer
+  on our host). Browsers without Fetch Metadata fall back to a Referer on our own host.
+- **Rate limit:** 120 requests a minute per address (IPv6 per /64), held in each warm
+  instance's memory and answered 429 with `Retry-After`. Not global: parallel instances
+  and cold starts each count from zero, and edge-cached answers never reach it.
+
+All of this reads headers a browser sets and a page cannot forge, so it keeps other
+websites from spending the quota through their visitors. A script that sends
+`Origin: capacitor://localhost` itself is indistinguishable from the app and is
+answered; the backstops for that are the edge cache, TMDB's own limits and rotating the
+key. A global limit would need Vercel Firewall rate-limit rules (dashboard) or a store
+keyed by IP — the owner's call.
 
 ## Alternative hosts
 

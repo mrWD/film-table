@@ -12,6 +12,8 @@ import { AutoBackup } from '../components/AutoBackup'
 import { ImportList } from '../components/ImportList'
 import { SupportLinks } from '../components/Support'
 import { Feedback } from '../components/Feedback'
+import { Licenses } from '../components/Licenses'
+import tmdbLogo from '../assets/tmdb-logo.svg'
 import { exportJsonFile, isNativeApp } from 'tables-core'
 import { native } from '../lib/native'
 import { donationsHidden, siteLink } from '../lib/from-app'
@@ -348,9 +350,19 @@ export default function ProfilePage() {
         </a>
         , Cinemeta and iTunes
       </p>
+      {/* TMDB's API terms, section 3: its logo identifies the use of its data, smaller than
+          the app's own marks, beside this notice word for word. The logo is the one from
+          themoviedb.org/about/logos-attribution, unaltered. */}
       <p className="attribution">
-        This product uses the TMDB API but is not endorsed or certified by TMDB.
+        <a href="https://www.themoviedb.org" target="_blank" rel="noreferrer">
+          <img className="tmdb-logo" src={tmdbLogo} alt="TMDB" />
+        </a>
       </p>
+      <p className="attribution">
+        This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise
+        approved by TMDB.
+      </p>
+      <Licenses />
     </div>
   )
 }

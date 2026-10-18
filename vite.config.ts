@@ -31,7 +31,8 @@ export default defineConfig({
       // Emits a worker whose only job is to unregister itself and empty its caches, so
       // the phones that already have one are cured on the next launch too.
       selfDestroying: NATIVE_SHELL,
-      includeAssets: ['favicon.svg', 'icons/*.png'],
+      // licenses.txt is listed so Profile can open it offline, like everything else.
+      includeAssets: ['favicon.svg', 'icons/*.png', 'licenses.txt'],
       manifest: {
         name: 'FilmTable',
         short_name: 'FilmTable',
@@ -61,7 +62,7 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /^https:\/\/(static\.tvmaze\.com|.*\.mzstatic\.com|m\.media-amazon\.com|images\.metahub\.space)\/.*/,
+            urlPattern: /^https:\/\/(static\.tvmaze\.com|m\.media-amazon\.com|images\.metahub\.space)\/.*/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'poster-images',

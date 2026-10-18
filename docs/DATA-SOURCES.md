@@ -92,6 +92,11 @@ announcements are not there in principle.
 
 CORS is sometimes missing, so `api.ts` has a JSONP fallback.
 
+**No artwork from here (2026-10-18).** Apple's terms let the Search API's artwork be
+used only to promote what its stores sell, which a tracker does not do. `mapMovie` no
+longer keeps `artworkUrl100`, and `Poster` drops any `*.mzstatic.com` address a library
+saved before that, so an iTunes-only film shows the plain placeholder.
+
 ## Wikidata — tested and rejected
 
 Considered as a key-free movie source. Not suitable: `wbsearchentities` for

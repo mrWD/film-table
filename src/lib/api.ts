@@ -278,7 +278,6 @@ interface ItunesMovie {
   kind?: string
   trackId?: number
   trackName?: string
-  artworkUrl100?: string
   longDescription?: string
   shortDescription?: string
   primaryGenreName?: string
@@ -323,17 +322,14 @@ async function itunesGet<T>(url: string): Promise<T> {
   }
 }
 
-function upscaleArtwork(url: string | undefined): string | null {
-  if (!url) return null
-  return url.replace(/100x100bb/, '600x600bb')
-}
-
 function mapMovie(m: ItunesMovie): MovieResult | null {
   if (!m.trackId || !m.trackName) return null
   return {
     id: String(m.trackId),
     title: m.trackName,
-    poster: upscaleArtwork(m.artworkUrl100),
+    // Apple licenses the Search API's artwork only for promoting what its stores sell,
+    // and a tracker is not that — so an iTunes-only film goes without a poster.
+    poster: null,
     genre: m.primaryGenreName,
     runtimeMin: m.trackTimeMillis ? Math.round(m.trackTimeMillis / 60000) : null,
     releaseDate: m.releaseDate ?? null,

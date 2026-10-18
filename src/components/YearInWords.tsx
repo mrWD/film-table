@@ -39,6 +39,8 @@ function plainSentence(review: YearReview): string {
 export function YearInWords({ review }: { review: YearReview }) {
   const [available, setAvailable] = useState(false)
   const [text, setText] = useState<string | null>(null)
+  /** Whether `text` is the model's or the hand-written fallback — only one is AI. */
+  const [byModel, setByModel] = useState(false)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -90,6 +92,7 @@ export function YearInWords({ review }: { review: YearReview }) {
       // sentence falls back to one this file writes itself: plainer than the model's,
       // and incapable of being wrong.
       setText(trustworthy ? written : plainSentence(review))
+      setByModel(trustworthy)
     } finally {
       setBusy(false)
     }
@@ -98,6 +101,9 @@ export function YearInWords({ review }: { review: YearReview }) {
   return (
     <>
       {text && <p className="recap">{text}</p>}
+      {text && byModel && (
+        <p className="chips-hint">AI-written on your phone from the figures above.</p>
+      )}
       {!text && (
         <button className="textbtn" disabled={busy} onClick={() => void write()}>
           {busy ? 'Writing…' : 'Say it in words'}

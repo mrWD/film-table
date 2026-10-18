@@ -133,7 +133,16 @@ export default function MovieDetailPage() {
           )}
         </div>
 
-        {movie.description && <Translated text={movie.description} className="detail-about open" />}
+        {/* TMDB's terms reserve its content from use "in connection with" machine
+            learning and AI, and Apple's Translation framework is both — so a TMDB
+            overview is shown as written. Overviews from the other sources still offer
+            it. */}
+        {movie.description &&
+          (movie.id.startsWith('tmdb:') ? (
+            <p className="detail-about open">{movie.description}</p>
+          ) : (
+            <Translated text={movie.description} className="detail-about open" />
+          ))}
 
         <WhereToWatch movieId={movie.id} />
 

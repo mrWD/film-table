@@ -38,9 +38,12 @@ export function Recap({ tracked, entry }: { tracked: TrackedShow; entry: ShowCac
           {generating ? 'Writing…' : saved ? 'Update the recap' : 'Recap what I have watched'}
         </button>
       )}
+      {/* Says it is AI before anything else: a paragraph in the app's own voice would
+          otherwise read as something the app knows, and the model can get a detail
+          wrong. */}
       <p className="chips-hint">
-        Written on your phone from the episodes you have already watched — nothing ahead,
-        and nothing leaves the device.
+        AI-written on your phone from the episodes you have already watched — nothing
+        ahead, and nothing leaves the device. It can get details wrong.
       </p>
     </section>
   )

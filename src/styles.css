@@ -2006,3 +2006,33 @@ input.regionselect {
 @media (prefers-reduced-motion: reduce) {
   .spark { animation: none; opacity: 0.8; }
 }
+
+/* ============ open-source licences ============ */
+
+.attribution .linkbtn {
+  text-decoration: underline;
+}
+
+/* Wrapped rather than scrolled sideways: a licence line is prose, and a horizontal
+   scrollbar is the one thing the 375px check exists to catch. */
+.licenses-text {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  max-height: 60vh;
+  overflow-y: auto;
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--ink2);
+  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+/* Smaller than anything that names FilmTable itself, as TMDB's terms require. */
+.tmdb-logo {
+  display: inline-block;
+  height: 10px;
+  width: auto;
+  vertical-align: middle;
+}

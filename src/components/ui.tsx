@@ -140,6 +140,20 @@ export function ShowChip({ name, to }: { name: string; to?: string }) {
 
 // ---------- poster ----------
 
+/**
+ * Artwork from the iTunes Search API, which Apple licenses only for promoting its own
+ * store. New searches no longer save it (see mapMovie in lib/api), but libraries built
+ * before that still hold these addresses, so they are dropped where every poster is
+ * drawn rather than by rewriting anyone's saved data.
+ */
+function isItunesArtwork(src: string): boolean {
+  try {
+    return new URL(src).hostname.endsWith('.mzstatic.com')
+  } catch {
+    return false
+  }
+}
+
 export function Poster({
   src,
   alt,
@@ -150,7 +164,7 @@ export function Poster({
   className?: string
 }) {
   const [failed, setFailed] = useState(false)
-  if (!src || failed) {
+  if (!src || failed || isItunesArtwork(src)) {
     return (
       <div className={`poster poster-fallback ${className ?? ''}`}>
         <IconTv size={28} strokeWidth={1.5} />
