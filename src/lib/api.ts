@@ -2,6 +2,7 @@ import type { Episode, MovieResult, ShowSummary } from './types'
 import { stripHtml, yearOf } from './format'
 import { lookupMovieTmdb, searchMoviesTmdb } from './tmdb'
 import { stats } from '../store/stats'
+import { countApiError } from './metrics'
 
 const TVMAZE = 'https://api.tvmaze.com'
 const CINEMETA = 'https://v3-cinemeta.strem.io'
@@ -111,9 +112,27 @@ function mapEpisode(e: TvmazeEpisode): Episode {
   }
 }
 
+/** Which keyless source a URL belongs to, for the failure counter (lib/metrics). */
+function sourceOf(url: string): string | null {
+  if (url.startsWith(TVMAZE)) return 'tvmaze'
+  if (url.startsWith(CINEMETA)) return 'cinemeta'
+  return null
+}
+
 async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`)
+  const source = sourceOf(url)
+  let res: Response
+  try {
+    res = await fetch(url)
+  } catch (err) {
+    if (source) countApiError(source)
+    throw err
+  }
+  if (!res.ok) {
+    // A 404 is an answer, not a failure: TVmaze gives it for an IMDb id it does not know.
+    if (source && res.status !== 404) countApiError(source)
+    throw new Error(`HTTP ${res.status} for ${url}`)
+  }
   return res.json() as Promise<T>
 }
 
@@ -318,7 +337,11 @@ async function itunesGet<T>(url: string): Promise<T> {
   try {
     return await getJson<T>(url)
   } catch {
-    return jsonp<T>(url)
+    // Only a failed JSONP is a failure: a missing CORS header is what it is there for.
+    return jsonp<T>(url).catch((err: unknown) => {
+      countApiError('itunes')
+      throw err
+    })
   }
 }
 

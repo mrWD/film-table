@@ -4,6 +4,7 @@ import type { Episode, ShowCacheEntry, TrackedShow } from '../lib/types'
 import { epCode } from '../lib/format'
 import { summarise } from '../lib/ai'
 import { deviceStorage } from '../lib/storage'
+import { count } from '../lib/metrics'
 
 /**
  * "What happened so far" — a recap of a show built only from the episodes you have
@@ -73,6 +74,7 @@ export const useRecap = create<RecapState>()(
             'short paragraph reminding them where the story stands. Use only what is ' +
             'written here. Do not add events, and do not mention episode numbers.',
         )
+        if (text) count('recap_generated')
         set((s) => ({
           generating: null,
           entries: text ? { ...s.entries, [tracked.id]: { text, marker } } : s.entries,

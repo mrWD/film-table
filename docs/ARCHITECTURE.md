@@ -194,6 +194,17 @@ Important: counter side effects must sit **outside** zustand reducers. Inside
 This is single-device statistics. Site-wide traffic across all people cannot be
 counted this way — that needs server-side aggregation (see DECISIONS).
 
+## Anonymous daily counts
+
+`src/lib/metrics.ts` — the one thing every build sends: a ping a day with counts of
+named events (`count('episode_checkin')` beside the action), `screen_<group>` from the
+route effect in `App.tsx` (a fixed list, so a typed address never becomes a name), error
+kinds (`window` errors by `error.name`, failed sources as `api_tvmaze`, `api_cinemeta`,
+`api_itunes`, `api_tmdb`), plus version, platform, language and date. The rules, field
+by field, are in app-metrics/docs/CLIENT.md; the server refuses anything else. Counters
+sit in localStorage under `filmtable-metrics-v1` until a ping is accepted. Like the
+stats above, `count` must be called outside a zustand updater.
+
 ## Analytics
 
 `src/components/Analytics.tsx` — Vercel Web Analytics: anonymised page views, with

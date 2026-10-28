@@ -1,5 +1,6 @@
 import { isNativeApp } from 'tables-core'
 import type { MovieResult } from './types'
+import { countApiError } from './metrics'
 
 /**
  * Client for our /api/tmdb proxy (see api/tmdb.js). The proxy may be
@@ -36,12 +37,17 @@ async function tmdbGet<T>(path: string, params: Record<string, string> = {}): Pr
   try {
     const res = await fetch(`${API_BASE}/api/tmdb?${qs}`)
     if (res.status === 404 || res.status === 403 || res.status === 503) {
+      countApiError('tmdb')
       disabled = true
       return null
     }
-    if (!res.ok) return null
+    if (!res.ok) {
+      countApiError('tmdb')
+      return null
+    }
     return (await res.json()) as T
   } catch {
+    countApiError('tmdb')
     disabled = true // no proxy at this origin at all
     return null
   }

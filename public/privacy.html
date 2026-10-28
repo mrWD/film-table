@@ -12,13 +12,15 @@
 </head>
 <body>
 <h1>FilmTable — Privacy</h1>
-<p><em>Last updated: 2026-10-18</em></p>
+<p><em>Last updated: 2026-10-28</em></p>
 
 <p>FilmTable is a personal tracker for TV shows and movies. The shortest honest summary: <strong>your
 library never leaves your device, and we could not read it if we wanted to.</strong></p>
 
 <h2>What we store</h2>
-<p>Nothing. There are no accounts, no sign-in, and no server that holds user data. Your
+<p>Nothing about you or your library. There are no accounts, no sign-in, and no server that
+holds user data &mdash; the only thing that reaches us is the anonymous daily usage count
+described under &ldquo;Usage statistics&rdquo;. Your
 library lives in your browser&rsquo;s storage (on the web) or in the app&rsquo;s own private
 storage (in the installed app). Deleting your browsing data or the app deletes it &mdash;
 which is why the app keeps offering you an export.</p>
@@ -29,10 +31,28 @@ TVmaze, the iTunes Search API, Cinemeta and — through our own proxy — TMDB. 
 and poster images load from their image hosts the same way.</p>
 <p>Search queries to TMDB pass through our proxy at film-table.vercel.app, which exists only to keep the API key off your device. It forwards the query and caches popular responses at the edge, so TMDB sees the proxy rather than you. The proxy itself writes nothing about you anywhere: to stop one address flooding it, it counts requests per IP address in memory for one minute, and the count is gone when the minute is. Vercel, which hosts the proxy, keeps its own request logs, including your IP address, for about an hour.</p>
 
-<h2>Analytics</h2>
-<p>The website may report cookieless page views to Vercel Web Analytics &mdash; a screen
-name, never a title, a search term or an identifier. <strong>The installed app reports
-nothing at all.</strong></p>
+<h2>Usage statistics</h2>
+<p>To learn how many people use FilmTable and which parts of it, the app sends one
+anonymous message a day to our statistics server (mrwd-metrics.vercel.app), at the first
+launch of the day. It holds counts since the previous one: which screens were opened, how
+often features such as check-ins, search, imports and backups were used, and kinds of
+errors (such as &ldquo;TypeError&rdquo; or &ldquo;TMDB did not answer&rdquo;). With them go
+the app version, the platform (iOS, Android or web), the interface language, the date, and
+the week you first opened a version of the app that counts.</p>
+<p>It carries <strong>no device, user or session ID, no titles, no search text, nothing you
+type and no error messages</strong>. The server adds the counts to daily, weekly and monthly
+totals for the whole app and keeps nothing per device; the totals are deleted after 400
+days. It does not store or log your IP address: to stop one address flooding it, it keeps a
+salted hash of the address in memory for ten minutes. Vercel, which hosts it, keeps its own
+request logs, including your IP address, for about an hour.</p>
+<p>It is on unless you turn it off: Profile &rarr; Share anonymous usage statistics. Off
+deletes the counts not yet sent and sends nothing more. On the website it starts off if
+your browser sends Global Privacy Control.</p>
+
+<h2>Web analytics</h2>
+<p>The website may also report cookieless page views to Vercel Web Analytics &mdash; a
+screen name, never a title, a search term or an identifier. The installed app does not use
+it.</p>
 <h2>Notifications</h2>
 <p>If you turn on episode alerts, the schedule is computed on your device from air dates already in its cache and handed to your phone’s own notification system. Nothing about your shows leaves the device for this.</p>
 

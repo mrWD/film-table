@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { findLikeThese, type Suggestion } from '../lib/like-these'
+import { count } from '../lib/metrics'
 import { MovieResultRow, ShowResultRow } from './cards'
 import { IconSparkle } from './Icons'
 
@@ -39,6 +40,7 @@ export function LikeThese() {
 
   const run = async () => {
     setBusy(true)
+    count('like_these_run')
     try {
       setFound(await findLikeThese(text))
     } finally {

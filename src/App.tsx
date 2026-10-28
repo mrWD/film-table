@@ -12,6 +12,7 @@ import { SupportFab } from './components/Support'
 import { donationsHidden } from './lib/from-app'
 import { MigrationBanner } from './components/MigrationBanner'
 import { InstallHint } from './components/InstallHint'
+import { MetricsNotice } from './components/MetricsNotice'
 import { Analytics } from './components/Analytics'
 import { rescheduleEpisodeAlerts } from './lib/reminders'
 import { refreshWidgets } from './lib/widget'
@@ -20,6 +21,10 @@ import { refreshShows } from './store/cache'
 import { useReminders } from './store/reminders'
 import { watchSystemTheme } from './store/theme'
 import { beginSessionOnce, useStats } from './store/stats'
+import { count } from './lib/metrics'
+
+/** Route groups the daily ping may name — a fixed list, so a typed address never becomes one. */
+const SCREENS = new Set(['shows', 'movies', 'explore', 'show', 'movie', 'profile', 'insights'])
 
 function Shell() {
   const location = useLocation()
@@ -50,6 +55,7 @@ function Shell() {
     const path = location.pathname
     const key = path.startsWith('/show/') ? '/show' : path.startsWith('/movie/') ? '/movie' : path
     useStats.getState().recordRoute(key)
+    if (SCREENS.has(key.slice(1))) count(`screen_${key.slice(1)}`)
   }, [location.pathname])
 
   return (
@@ -57,6 +63,7 @@ function Shell() {
       <ScrollToTop />
       <MigrationBanner />
       <InstallHint />
+      <MetricsNotice />
       <Routes>
         <Route path="/" element={<Navigate to="/shows" replace />} />
         <Route path="/shows" element={<ShowsPage />} />

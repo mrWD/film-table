@@ -44,14 +44,23 @@ Media.
 
 The honest answers, same on both stores:
 
-- **Data collected: none.** The library never leaves the device; there are no
-  accounts and no server for user data.
+- **Data collected: anonymous usage counts, nothing about the person.** The library never
+  leaves the device; there are no accounts and no server for user data. Once a day the
+  app sends counts of screens and features used and of error kinds, with version,
+  platform, language and date (`src/lib/metrics.ts`; the contract is
+  app-metrics/docs/CLIENT.md). No identifiers, titles, search text or anything typed. On
+  by default, off in Profile; off also deletes the unsent counts.
 - **Data shared: none.** Catalogue queries go to the sources named in the privacy
   page as a technical necessity, not as data sharing for any purpose of ours.
-- **Analytics in the app: none.** The cookieless web analytics run only on the
-  website; the component is inert in the native app.
-- Google Play Data safety: "No data collected", "No data shared". Apple privacy
-  label: "Data Not Collected".
+- **Analytics in the app: the daily counts above, nothing else.** The cookieless Vercel
+  web analytics run only on the website; that component is inert in the native app.
+- Apple privacy label (App Store Connect → App Privacy): **Usage Data → Product
+  Interaction** and **Diagnostics → Other Diagnostic Data**, each with purpose
+  *Analytics*, **not linked to the user**, **not used for tracking**. Everything else:
+  not collected.
+- Google Play Data safety: data collected — **App activity → App interactions** and
+  **App info and performance → Diagnostics**, purpose *Analytics*; not shared; encrypted
+  in transit; optional (users can turn it off). "No data shared".
 
 ## What only the owner can do
 

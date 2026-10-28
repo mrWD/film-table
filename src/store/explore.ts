@@ -9,6 +9,7 @@ import {
 } from '../lib/api'
 import { upcomingMoviesTmdb } from '../lib/tmdb'
 import { stats } from './stats'
+import { count } from '../lib/metrics'
 
 export type ExploreMode = 'all' | 'shows' | 'movies'
 
@@ -98,6 +99,7 @@ export const useExplore = create<ExploreState>((set, get) => ({
     }
     set({ searching: true, searchError: false })
     stats.search()
+    count('search')
     try {
       if (mode === 'shows') {
         const results = await searchShows(term)

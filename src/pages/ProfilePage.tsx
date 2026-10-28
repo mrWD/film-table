@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useSyncExternalStore } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { buildBackup, isValidBackup, useLibrary } from '../store/library'
 import { useShowCache } from '../store/cache'
@@ -16,6 +16,7 @@ import { Licenses } from '../components/Licenses'
 import tmdbLogo from '../assets/tmdb-logo.svg'
 import { exportJsonFile, isNativeApp } from 'tables-core'
 import { native } from '../lib/native'
+import { count, metricsEnabled, setMetricsEnabled, subscribeMetrics } from '../lib/metrics'
 import { donationsHidden, siteLink } from '../lib/from-app'
 import { useReminders } from '../store/reminders'
 import { formatBigDuration } from '../lib/format'
@@ -55,6 +56,7 @@ export default function ProfilePage() {
   const setTheme = useTheme((s) => s.setTheme)
   const alertsOn = useReminders((s) => s.enabled)
   const setAlertsOn = useReminders((s) => s.setEnabled)
+  const sharing = useSyncExternalStore(subscribeMetrics, metricsEnabled)
   const fileRef = useRef<HTMLInputElement>(null)
   const tapped = useRef(0)
   const navigate = useNavigate()
@@ -93,6 +95,7 @@ export default function ProfilePage() {
       return
     }
     useStats.getState().recordExport()
+    count('backup_exported')
     showToast('Backup exported')
   }
 
@@ -245,6 +248,27 @@ export default function ProfilePage() {
           </p>
         </section>
       )}
+
+      {/* lib/metrics: off stops the daily ping and deletes what was counted. */}
+      <section>
+        <h2 className="h2">Share anonymous usage statistics</h2>
+        <div className="chips">
+          {([false, true] as const).map((on) => (
+            <button
+              key={String(on)}
+              className={`chip${sharing === on ? ' active' : ''}`}
+              aria-pressed={sharing === on}
+              onClick={() => setMetricsEnabled(on)}
+            >
+              {on ? 'ON' : 'OFF'}
+            </button>
+          ))}
+        </div>
+        <p className="chips-hint">
+          Once a day: which screens and features were used, app version, platform and
+          language. No IDs, titles or anything you type.
+        </p>
+      </section>
 
       <section>
         <ImportList />

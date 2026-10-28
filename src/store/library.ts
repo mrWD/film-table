@@ -4,6 +4,7 @@ import type { BackupFile, Episode, Movie, MovieResult, TrackedShow } from '../li
 import { successFeedback, tapFeedback } from '../lib/native-ui'
 import { deviceStorage } from '../lib/storage'
 import { useStats } from './stats'
+import { count } from '../lib/metrics'
 
 interface LibraryState {
   shows: Record<number, TrackedShow>
@@ -48,12 +49,13 @@ function withoutDescriptions(movies: Record<string, Movie>): Record<string, Movi
 
 export const useLibrary = create<LibraryState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       shows: {},
       movies: {},
       watchGrid: false,
 
-      followShow: (id) =>
+      followShow: (id) => {
+        if (get().shows[id]?.status !== 'following') count('show_followed')
         set((s) => {
           if (s.shows[id]) {
             return {
@@ -62,7 +64,8 @@ export const useLibrary = create<LibraryState>()(
           }
           const tracked: TrackedShow = { id, addedAt: Date.now(), status: 'following', watched: {} }
           return { shows: { ...s.shows, [id]: tracked } }
-        }),
+        })
+      },
 
       removeShow: (id) =>
         set((s) => {
@@ -83,6 +86,7 @@ export const useLibrary = create<LibraryState>()(
         // runs it twice, which would double every counter.
         if (watched) {
           useStats.getState().recordCheckIn()
+          count('episode_checkin')
           tapFeedback()
         }
         set((s) => {
@@ -97,7 +101,8 @@ export const useLibrary = create<LibraryState>()(
         })
       },
 
-      setEpisodesWatched: (showId, episodeIds, watched) =>
+      setEpisodesWatched: (showId, episodeIds, watched) => {
+        if (watched && episodeIds.length > 0) count('episodes_marked')
         set((s) => {
           const t = s.shows[showId]
           if (!t) return s
@@ -110,9 +115,13 @@ export const useLibrary = create<LibraryState>()(
           const next: TrackedShow = { ...t, watched: w }
           next.lastWatchedAt = recomputeLastWatched(next)
           return { shows: { ...s.shows, [showId]: next } }
-        }),
+        })
+      },
 
-      addMovie: (m, status) =>
+      addMovie: (m, status) => {
+        const before = get().movies[m.id]
+        if (!before) count('movie_added')
+        if (status === 'watched' && before?.status !== 'watched') count('movie_watched')
         set((s) => {
           const existing = s.movies[m.id]
           if (existing) {
@@ -135,11 +144,13 @@ export const useLibrary = create<LibraryState>()(
             watchedAt: status === 'watched' ? Date.now() : undefined,
           }
           return { movies: { ...s.movies, [m.id]: movie } }
-        }),
+        })
+      },
 
       setMovieStatus: (id, status) => {
         if (status === 'watched') {
           useStats.getState().recordMovieMarked()
+          count('movie_watched')
           successFeedback()
         }
         set((s) => {

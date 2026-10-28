@@ -3,6 +3,7 @@ import { readList, type ImportCandidate } from '../lib/import-list'
 import { useLibrary } from '../store/library'
 import { useShowCache } from '../store/cache'
 import { useUi } from '../store/ui'
+import { count } from '../lib/metrics'
 
 /**
  * Paste a list from wherever you tracked before.
@@ -39,6 +40,7 @@ export function ImportList() {
       follow(candidate.match.id)
       added += 1
     }
+    if (added) count('list_imported')
     setFound(null)
     setText('')
     showToast(added ? `Added ${added} show${added === 1 ? '' : 's'}` : 'Nothing selected')

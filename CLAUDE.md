@@ -30,8 +30,18 @@ The owner and, as of today, the only target user is **mrWD** (Viktor,
    browser, a JSON file in private app storage when running natively, and
    localStorage for small prefs. Both moves use the same one-way copy — read the
    old store once, write the new one, leave the old value frozen (see DECISIONS).
-   No accounts, no analytics, no data collection. The only server code is a thin
-   proxy to TMDB, which stores nothing.
+   No accounts and nothing collected about a person. The only server code here is a
+   thin proxy to TMDB, which stores nothing.
+   **Anonymous usage counts are the one exception** (the owner's decision, 2026-10-28,
+   made to learn how many people use the apps before deciding on ads or tips):
+   `src/lib/metrics.ts` sends one ping a day to `mrwd-metrics.vercel.app` with counts of
+   named events and screen groups, error kinds, version, platform, UI language, local
+   date and cohort week. Never titles, search text, anything typed, error messages or
+   any ID. On by default; off in Profile ("Share anonymous usage statistics") stops it
+   and clears the counters; Global Privacy Control starts it off on the web. It follows
+   [app-metrics/docs/CLIENT.md](../../app-metrics/docs/CLIENT.md) (`~/Projects/app-metrics`)
+   to the letter — read that before changing an event, a field or the timing, and keep
+   `public/privacy.html` and `docs/STORE.md` in step.
 2. **The app must work without keys.** TMDB is an enhancement, not a dependency.
    If the proxy is unavailable or the key is unset, movie search silently switches
    to Cinemeta/iTunes. That fallback must not be broken.
@@ -73,6 +83,10 @@ running:
 - Explore with no query: the For you, Coming to theaters and Airing tonight
   sections;
 - the hidden `/#/insights` page (usage counters, not linked from navigation);
+- the daily ping, against `node scripts/dev-server.mjs` in `~/Projects/app-metrics`:
+  `VITE_METRICS_URL=http://localhost:8787/api/ping` in `.env.development.local`, and the
+  dev server prints every body it gets (204 = accepted, 400 names the bad field). State
+  is `filmtable-metrics-v1` in localStorage; move `lastDay` back to send again;
 - both themes and **horizontal overflow**
   (`document.documentElement.scrollWidth` against `clientWidth` — must be 0; this
   already caught a CSS Grid bug);
@@ -197,9 +211,9 @@ Two traps worth keeping:
 - The fate of the in-app donation button under TMDB's "personal use / no revenue"
   certification (see DECISIONS).
 - LinkedIn post texts are written (FilmTable and GamesTable) but not published.
-- The app has Vercel Web Analytics: no cookies, screen name only. That is a
-  **departure** from the original "no analytics" principle — when stating anything
-  publicly, do not claim there is no analytics at all.
+- The web build also has Vercel Web Analytics (no cookies, screen name only, inert in
+  the native app), and every build has the anonymous daily counts above — when stating
+  anything publicly, do not claim there is no analytics at all.
 - `.chips-hint` and `.attribution` give 3.99:1 in the dark theme — below the AA
   threshold. The owner has been told; he did not order a fix.
 
