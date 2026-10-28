@@ -1861,6 +1861,12 @@ img {
   flex-shrink: 0;
 }
 
+/* It sits above the page, whose header pads itself for the notch, so in the app it has
+   to clear the status bar on its own. */
+.metricsnotice {
+  margin-top: calc(10px + env(safe-area-inset-top));
+}
+
 /* A datarow that reports state instead of doing something when tapped. */
 .datarow.static {
   cursor: default;

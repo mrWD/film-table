@@ -23,7 +23,7 @@ export function MetricsNotice() {
   if (gone || !enabled) return null
 
   return (
-    <div className="installhint" role="note">
+    <div className="installhint metricsnotice" role="note">
       <div className="installhint-body">
         <p>
           FilmTable sends anonymous usage counts once a day — no IDs, nothing you type. You
