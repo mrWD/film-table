@@ -1,0 +1,36 @@
+{
+  "packageName": "com.mrwd.filmtable",
+  "defaultLanguage": "en-US",
+  "title": "FilmTable",
+  "shortDescription": "Track TV shows and movies, one tap per episode. No account, works offline.",
+  "fullDescription": "FilmTable keeps track of what you watch. Shows go episode by episode, movies go on a watch list, and the whole library stays on your device.\n\n• One tap checks in an episode, and Up Next always knows where you are in every show\n• Upcoming lists the episodes that are out and waiting, then what airs next\n• A watch list for movies and a shelf for the ones you've seen\n• Explore what's airing tonight, what's coming to theaters and picks based on what you watch\n• Where to watch: streaming options for your country\n• Episode alerts, worked out on your device from air dates\n• Paste a list from another tracker and FilmTable finds the titles\n• A year in review of your watching\n\nNo account, no sign-up. Your library stays on your device, and you can export it to a single file and import it back whenever you like.\n\nOnce a day the app sends anonymous usage counts: which screens and features were used, kinds of errors, the app version, platform and language. No IDs, no titles, nothing you type. You can turn it off in Profile.\n\nShow and movie data comes from TVmaze, TMDB, Cinemeta and the iTunes Search API. Streaming data comes from JustWatch. This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.\n\nThe movie posters in the screenshots are from the Blender Foundation open movies: © Blender Foundation | www.blender.org, CC BY.",
+  "category": "ENTERTAINMENT",
+  "contactEmail": "lvigtor@gmail.com",
+  "website": "https://mrwd.github.io/products/film-table/",
+  "privacyPolicyUrl": "https://film-table.vercel.app/privacy.html",
+  "containsAds": false,
+  "financialFeatures": "none",
+  "dataSafety": {
+    "collected": [
+      {
+        "category": "App activity › App interactions",
+        "shared": false,
+        "optional": true,
+        "purposes": [
+          "Analytics"
+        ]
+      },
+      {
+        "category": "App info and performance › Diagnostics",
+        "shared": false,
+        "optional": true,
+        "purposes": [
+          "Analytics"
+        ]
+      }
+    ],
+    "encryptedInTransit": true,
+    "deletionRequest": "Nothing is linked to a user, so there is nothing to delete on request. Turning the switch off deletes the unsent counts on the device."
+  },
+  "contentRating": "Teen"
+}

@@ -1,0 +1,46 @@
+{
+  "appId": "6806612159",
+  "locale": "en-US",
+  "name": "FilmTable",
+  "subtitle": "Track TV shows and movies",
+  "promotionalText": "One tap checks in an episode, and Up Next always knows where you are. No account needed, and your library stays on your device.",
+  "description": "FilmTable keeps track of what you watch. Shows go episode by episode, movies go on a watch list, and the whole library stays on your device.\n\n• One tap checks in an episode, and Up Next always knows where you are in every show\n• Upcoming lists the episodes that are out and waiting, then what airs next\n• A watch list for movies and a shelf for the ones you've seen\n• Explore what's airing tonight, what's coming to theaters and picks based on what you watch\n• Where to watch: streaming options for your country\n• Episode alerts, worked out on your device from air dates\n• Paste a list from another tracker and FilmTable finds the titles\n• A year in review of your watching\n• Home screen widgets for Up Next and Upcoming\n• On devices with Apple Intelligence, a spoiler-free recap of where you left a show, written on the device\n• If your iPhone or iPad is set to another language, descriptions can be translated on the device, with the original one tap away\n\nNo account, no sign-up. Your library stays on your device, and you can export it to a single file and import it back whenever you like.\n\nOnce a day the app sends anonymous usage counts: which screens and features were used, kinds of errors, the app version, platform and language. No IDs, no titles, nothing you type. You can turn it off in Profile.\n\nShow and movie data comes from TVmaze, TMDB, Cinemeta and the iTunes Search API. Streaming data comes from JustWatch. This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.\n\nThe movie posters in the screenshots are from the Blender Foundation open movies: © Blender Foundation | www.blender.org, CC BY.",
+  "keywords": "tracker,series,episode,watchlist,film,watched,binge,season,upcoming,airing,cinema,diary,calendar",
+  "supportUrl": "https://mrwd.github.io/products/film-table/",
+  "marketingUrl": "https://mrwd.github.io/products/film-table/",
+  "privacyPolicyUrl": "https://film-table.vercel.app/privacy.html",
+  "copyright": "2026 Viktor Lavrov",
+  "primaryCategory": "ENTERTAINMENT",
+  "secondaryCategory": null,
+  "contentRights": "USES_THIRD_PARTY_CONTENT",
+  "ageRating": {
+    "horrorOrFearThemes": "INFREQUENT",
+    "matureOrSuggestiveThemes": "INFREQUENT",
+    "violenceRealistic": "INFREQUENT",
+    "gunsOrOtherWeapons": "INFREQUENT",
+    "profanityOrCrudeHumor": "INFREQUENT",
+    "sexualContentOrNudity": "INFREQUENT",
+    "alcoholTobaccoOrDrugUseOrReferences": "INFREQUENT"
+  },
+  "reviewNotes": "No account or sign-in. Everything works right after install.\n\nTo try it: open Explore in the bottom bar, search for a show (for example Bonanza) and tap + on its card. Then go to Shows and tap the round check button to check in the next episode. For movies, search a film in Explore, tap + to put it on the watch list, then open it and tap Mark watched.\n\nNetwork calls: catalogue searches go straight to TVmaze, Cinemeta and the iTunes Search API. TMDB requests go through our own proxy at film-table.vercel.app, which only keeps the API key off the device. Posters load from those services' image hosts. Once a day the app sends anonymous usage counts to mrwd-metrics.vercel.app: screens and features used, error kinds, app version, platform and language, with no identifiers of any kind. It can be turned off in Profile under \"Share anonymous usage statistics\". Episode alerts are local notifications scheduled on the device. The recap uses Apple's on-device model and only appears on devices with Apple Intelligence. Nothing else leaves the device.\n\nThere are no in-app purchases, no ads and no donation links in the app.",
+  "appPrivacy": {
+    "collected": [
+      {
+        "type": "Usage Data › Product Interaction",
+        "linked": false,
+        "tracking": false,
+        "purposes": [
+          "Analytics"
+        ]
+      },
+      {
+        "type": "Diagnostics › Other Diagnostic Data",
+        "linked": false,
+        "tracking": false,
+        "purposes": [
+          "Analytics"
+        ]
+      }
+    ]
+  }
+}
