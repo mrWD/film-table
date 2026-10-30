@@ -1,5 +1,17 @@
 apply plugin: 'com.android.application'
 
+// Release signing with the one upload key shared by all of the owner's apps; Play App Signing
+// holds the real app signing key. The four values live in ~/.gradle/gradle.properties on the
+// owner's Mac and never in this repository (store-release/SCHEMA.md). Without them the release
+// is built unsigned, with a warning, so the project still builds anywhere.
+def uploadKey = [
+    storeFile    : findProperty('MRWD_UPLOAD_STORE_FILE'),
+    storePassword: findProperty('MRWD_UPLOAD_STORE_PASSWORD'),
+    keyAlias     : findProperty('MRWD_UPLOAD_KEY_ALIAS'),
+    keyPassword  : findProperty('MRWD_UPLOAD_KEY_PASSWORD'),
+]
+def hasUploadKey = uploadKey.values().every { it }
+
 android {
     namespace = "com.mrwd.filmtable"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,7 +19,8 @@ android {
         applicationId "com.mrwd.filmtable"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        // Rises with every upload to Play; kept equal to the iOS build number of the same commit.
+        versionCode 4
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -16,10 +29,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasUploadKey) {
+            release {
+                storeFile file(uploadKey.storeFile)
+                storePassword uploadKey.storePassword
+                keyAlias uploadKey.keyAlias
+                keyPassword uploadKey.keyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasUploadKey) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
@@ -43,6 +69,14 @@ dependencies {
 }
 
 apply from: 'capacitor.build.gradle'
+
+gradle.taskGraph.whenReady { graph ->
+    if (!hasUploadKey && graph.allTasks.any { it.name.contains('Release') }) {
+        logger.warn('WARNING: MRWD_UPLOAD_STORE_FILE, MRWD_UPLOAD_STORE_PASSWORD, MRWD_UPLOAD_KEY_ALIAS and ' +
+            'MRWD_UPLOAD_KEY_PASSWORD are not all set in ~/.gradle/gradle.properties, so this release ' +
+            'build is UNSIGNED. Google Play will not accept it.')
+    }
+}
 
 try {
     def servicesJSON = file('google-services.json')
